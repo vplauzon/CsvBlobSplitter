@@ -2,7 +2,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
 
-namespace ConsoleApp2
+namespace CsvBlobSplitterConsole
 {
     internal class CsvSplitter
     {
@@ -28,8 +28,12 @@ namespace ConsoleApp2
             _suffix = suffix;
         }
 
-        public Task SplitAsync()
+        public async Task SplitAsync()
         {
+            var blobList = await _sourceContainerClient
+                .GetBlobsAsync(prefix:_sourcePrefix)
+                .ToListAsync();
+
             throw new NotImplementedException();
         }
     }

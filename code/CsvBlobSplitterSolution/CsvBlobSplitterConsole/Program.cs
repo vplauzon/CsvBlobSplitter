@@ -1,4 +1,4 @@
-﻿namespace ConsoleApp2
+﻿namespace CsvBlobSplitterConsole
 {
     internal class Program
     {

@@ -18,8 +18,9 @@
                 Console.WriteLine($"Source Root Blob Url:  {sourceRoot}");
                 Console.WriteLine($"Suffix:  {suffix}");
                 Console.WriteLine($"Target Root Blob Url:  {targetRoot}");
+                Console.WriteLine();
 
-                var splitter = new CsvSplitter(sourceRoot, suffix, targetRoot);
+                var splitter = new CsvSplitter(new Uri(sourceRoot), suffix, new Uri(targetRoot));
 
                 await splitter.SplitAsync();
             }

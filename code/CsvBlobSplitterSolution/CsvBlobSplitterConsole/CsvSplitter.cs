@@ -10,7 +10,6 @@ namespace CsvBlobSplitterConsole
     internal class CsvSplitter
     {
         private const int BUFFER_SIZE = 200000000;
-        private const int BUFFER_LINES = 10000;
         private const int MAX_FILE_SIZE = 10 * 1024 * 1024;
 
         private readonly bool _hasHeaders;
@@ -129,21 +128,25 @@ namespace CsvBlobSplitterConsole
                 }
                 while (writeStream.Position < MAX_FILE_SIZE)
                 {
-                    for (int i = 0; i < BUFFER_LINES; ++i)
+                    if (await csvParser.ReadAsync())
                     {
-                        if (await csvParser.ReadAsync())
-                        {
-                            var record = csvParser.Record!;
+                        var record = csvParser.Record!;
 
-                            await textWriter.WriteLineAsync(string.Join(", ", record));
+                        if (record.Length != headers.Count)
+                        {
+                            //throw new InvalidDataException(
+                            //    $"Header has {headers.Count} columns while data has"
+                            //    + $" {record.Length} columns");
                         }
-                        else
-                        {   //  Escape the loop:  no more bytes to read
-                            return false;
-                        }
+
+                        await textWriter.WriteLineAsync(string.Join(", ", record));
                     }
-                    await textWriter.FlushAsync();
+                    else
+                    {   //  Escape the loop:  no more bytes to read
+                        return false;
+                    }
                 }
+                await textWriter.FlushAsync();
             }
 
             //  More bytes to read

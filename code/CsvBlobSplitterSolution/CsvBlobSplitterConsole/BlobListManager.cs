@@ -52,6 +52,7 @@ namespace CsvBlobSplitterConsole
 
             foreach (var blob in blobList)
             {
+                var splitter = new CsvSplitter();
                 var task = SplitBlobAsync(_sourceContainerClient.GetBlobClient(blob.Name));
 
                 taskList.Add(task);

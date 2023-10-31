@@ -9,7 +9,7 @@ using System.Globalization;
 
 namespace CsvBlobSplitterConsole
 {
-    internal class CsvSplitter
+    internal class BlobListManager
     {
         private const int MAX_PARALLEL_BLOBS = 5;
         private const int BUFFER_SIZE = 200000000;
@@ -23,7 +23,7 @@ namespace CsvBlobSplitterConsole
         private readonly string _suffix;
         private readonly bool _hasHeaders;
 
-        public CsvSplitter(Uri sourceRoot, string suffix, Uri targetRoot, bool hasHeaders)
+        public BlobListManager(Uri sourceRoot, string suffix, Uri targetRoot, bool hasHeaders)
         {
             var sourceBlobClient = new BlockBlobClient(
                 sourceRoot,

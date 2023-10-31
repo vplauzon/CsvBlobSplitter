@@ -26,7 +26,7 @@
                 {
                     var hasHeadersBool = bool.Parse(hasHeaders);
 
-                    var splitter = new CsvSplitter(
+                    var splitter = new BlobListManager(
                         new Uri(sourceRoot),
                         suffix,
                         new Uri(targetRoot),

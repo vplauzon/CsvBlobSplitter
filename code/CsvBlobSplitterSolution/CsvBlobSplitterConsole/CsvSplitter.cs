@@ -3,6 +3,7 @@ using Azure.Storage.Blobs.Models;
 using CsvHelper;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.IO.Compression;
 
 namespace CsvBlobSplitterConsole
 {
@@ -42,7 +43,8 @@ namespace CsvBlobSplitterConsole
             };
 
             using (var readStream = await _originalBlobClient.OpenReadAsync(readOptions))
-            using (var textReader = new StreamReader(readStream))
+            using (var uncompressedReader = UncompressStream(readStream))
+            using (var textReader = new StreamReader(uncompressedReader))
             using (var csvParser = new CsvParser(textReader, CultureInfo.InvariantCulture))
             {
                 var headers = await ReadHeadersAsync(csvParser);
@@ -66,6 +68,33 @@ namespace CsvBlobSplitterConsole
                     }
                 }
             }
+        }
+
+        private Stream UncompressStream(Stream readStream)
+        {
+            switch (_compression)
+            {
+                case BlobCompression.None:
+                    return readStream;
+                //case BlobCompression.Gzip:
+                case BlobCompression.Zip:
+                    var archive = new ZipArchive(readStream);
+                    var entries = archive.Entries;
+
+                    if (!entries.Any())
+                    {
+                        throw new InvalidDataException(
+                            $"Archive (zipped blob) doesn't contain any file");
+                    }
+                    else
+                    {
+                        return entries.First().Open();
+                    }
+
+                default:
+                    throw new NotSupportedException(_compression.ToString());
+            }
+            throw new NotImplementedException();
         }
 
         private async Task<IImmutableList<string>> ReadHeadersAsync(CsvParser csvParser)

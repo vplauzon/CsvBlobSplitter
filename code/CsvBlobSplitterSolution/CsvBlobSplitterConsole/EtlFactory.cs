@@ -25,6 +25,8 @@ namespace CsvBlobSplitterConsole
                 (headers) => new CsvBlobSink(
                     destinationBlobContainer,
                     destinationBlobPrefix,
+                    runSettings.MaxRowsPerShard,
+                    runSettings.MaxMbPerShard,
                     headers),
                 runSettings.HasCsvHeaders);
         }

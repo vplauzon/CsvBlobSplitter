@@ -15,6 +15,8 @@ namespace CsvBlobSplitterConsole.Csv
 
         private readonly BlobContainerClient _destinationBlobContainer;
         private readonly string _destinationBlobPrefix;
+        private readonly int _maxRowsPerShard;
+        private readonly long _maxBytesPerShard;
         private readonly IEnumerable<string>? _headers;
         private readonly ConcurrentQueue<IEnumerable<string>> _dataQueue = new();
         private volatile int _queueSize = 0;
@@ -24,11 +26,15 @@ namespace CsvBlobSplitterConsole.Csv
         public CsvBlobSink(
             BlobContainerClient destinationBlobContainer,
             string destinationBlobPrefix,
+            int maxRowsPerShard,
+            int maxMbPerShard,
             IEnumerable<string>? headers)
         {
             _destinationBlobContainer = destinationBlobContainer;
             _destinationBlobPrefix = destinationBlobPrefix;
             _headers = headers;
+            _maxRowsPerShard = maxRowsPerShard;
+            _maxBytesPerShard = ((long)maxMbPerShard) * 1024 * 1024;
         }
 
         void ICsvSink.Start()
@@ -85,6 +91,7 @@ namespace CsvBlobSplitterConsole.Csv
             };
             var shardName = $"{_destinationBlobPrefix}-{shardCounter}.csv.gz";
             var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
+            var rowCount = 0;
 
             using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
             using (var gzipStream = new GZipStream(blobStream, CompressionLevel.Fastest))
@@ -96,11 +103,14 @@ namespace CsvBlobSplitterConsole.Csv
                 {
                     await WriteRowAsync(csvWriter, _headers);
                 }
-                while (!_isCompleted)
+                while (!_isCompleted
+                    && rowCount < _maxRowsPerShard
+                    && countingStream.Position < _maxBytesPerShard)
                 {
                     if (_dataQueue.TryDequeue(out var row))
                     {
                         await WriteRowAsync(csvWriter, row);
+                        ++rowCount;
                     }
                     else
                     {

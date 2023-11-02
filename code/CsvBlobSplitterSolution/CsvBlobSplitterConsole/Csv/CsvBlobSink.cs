@@ -10,7 +10,8 @@ namespace CsvBlobSplitterConsole.Csv
 {
     internal class CsvBlobSink : ICsvSink
     {
-        private const int BUFFER_SIZE = 200000000;
+        private const int WRITING_BUFFER_SIZE = 200000000;
+        private const int COMPRESSION_BUFFER_SIZE = 1024 * 1024;
         private const int QUEUE_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
         private readonly TimeSpan WAIT_TIME = TimeSpan.FromSeconds(1);
 
@@ -90,7 +91,7 @@ namespace CsvBlobSplitterConsole.Csv
             var stopWatch = new Stopwatch();
             var writeOptions = new BlobOpenWriteOptions
             {
-                BufferSize = BUFFER_SIZE
+                BufferSize = WRITING_BUFFER_SIZE
             };
             var shardName = $"{_destinationBlobPrefix}-{shardCounter}.csv.gz";
             var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
@@ -99,7 +100,8 @@ namespace CsvBlobSplitterConsole.Csv
             stopWatch.Start();
             using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
             using (var gzipStream = new GZipStream(blobStream, CompressionLevel.Fastest))
-            using (var countingStream = new ByteCountingStream(gzipStream))
+            using (var bufferedStream = new BufferedStream(gzipStream, COMPRESSION_BUFFER_SIZE))
+            using (var countingStream = new ByteCountingStream(bufferedStream))
             using (var textWriter = new StreamWriter(countingStream))
             using (var csvWriter = new CsvWriter(textWriter, CultureInfo.InvariantCulture))
             {

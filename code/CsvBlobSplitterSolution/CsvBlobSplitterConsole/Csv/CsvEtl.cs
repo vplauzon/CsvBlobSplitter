@@ -35,10 +35,12 @@ namespace CsvBlobSplitterConsole.Csv
                     if (_hasCsvHeaders)
                     {   //  Use first row as headers
                         sink = _sinkFactory(row);
+                        sink.Start();
                     }
                     else
                     {
                         sink = _sinkFactory(null);
+                        sink.Start();
                         await sink!.PushRowAsync(row);
                     }
                 }

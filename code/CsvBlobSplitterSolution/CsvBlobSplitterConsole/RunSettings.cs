@@ -16,6 +16,10 @@ namespace CsvBlobSplitterConsole
 
         public bool HasCsvHeaders { get; }
 
+        public int MaxRowsPerShard { get; }
+
+        public int MaxMbPerShard { get; }
+
         #region Constructors
         public static RunSettings FromEnvironmentVariables()
         {
@@ -23,29 +27,42 @@ namespace CsvBlobSplitterConsole
             var destinationBlobPrefix = GetUri("DestinationBlobPrefix", false);
             var compression = GetEnum<BlobCompression>("Compression", false);
             var hasCsvHeaders = GetBool("HasCsvHeaders", false);
+            var maxRowsPerShard = GetInt("MaxRowsPerShard", false);
+            var maxMbPerShard = GetInt("MaxMbPerShard", false);
 
             return new RunSettings(
                 sourceBlob,
                 destinationBlobPrefix,
                 compression,
-                hasCsvHeaders);
+                hasCsvHeaders,
+                maxRowsPerShard,
+                maxMbPerShard);
         }
 
         public RunSettings(
             Uri sourceBlob,
             Uri? destinationBlobPrefix,
             BlobCompression? compression,
-            bool? hasCsvHeaders)
+            bool? hasCsvHeaders,
+            int? maxRowsPerShard,
+            int? maxMbPerShard)
         {
             if (destinationBlobPrefix == null)
             {
                 throw new NotSupportedException("No destination specified");
             }
 
+            if (maxRowsPerShard is null)
+            {
+                throw new ArgumentNullException(nameof(maxRowsPerShard));
+            }
+
             SourceBlob = sourceBlob;
             DestinationBlobPrefix = destinationBlobPrefix;
             Compression = compression ?? BlobCompression.None;
             HasCsvHeaders = hasCsvHeaders ?? true;
+            MaxRowsPerShard = maxRowsPerShard ?? 1000000;
+            MaxMbPerShard = maxMbPerShard ?? 200;
         }
         #endregion
 
@@ -150,6 +167,34 @@ namespace CsvBlobSplitterConsole
             if (value != null)
             {
                 if (bool.TryParse(value, out var boolValue))
+                {
+                    return boolValue;
+                }
+                else
+                {
+                    throw new ArgumentNullException(variableName, $"Unsupported value:  '{value}'");
+                }
+            }
+            else
+            {
+                return null;
+            }
+        }
+        #endregion
+
+        #region Int
+        private static int? GetInt(string variableName, bool mustExist)
+        {
+            var value = Environment.GetEnvironmentVariable(variableName);
+
+            if (mustExist && value == null)
+            {
+                throw new ArgumentNullException(variableName, "Environment variable missing");
+            }
+
+            if (value != null)
+            {
+                if (int.TryParse(value, out var boolValue))
                 {
                     return boolValue;
                 }

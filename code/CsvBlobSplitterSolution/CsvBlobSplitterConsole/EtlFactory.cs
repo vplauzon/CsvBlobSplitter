@@ -22,7 +22,7 @@ namespace CsvBlobSplitterConsole
 
             return new CsvEtl(
                 source,
-                (headers) => new CsvBlobSplit(
+                (headers) => new CsvBlobSink(
                     destinationBlobContainer,
                     destinationBlobPrefix,
                     headers),

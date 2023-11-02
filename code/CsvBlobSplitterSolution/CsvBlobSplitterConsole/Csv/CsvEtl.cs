@@ -24,34 +24,32 @@ namespace CsvBlobSplitterConsole.Csv
 
         async Task IEtl.ProcessAsync()
         {
-            var headers = _hasCsvHeaders
-                ? await _source.RetrieveRowAsync()
-                : null;
+            var isFirstRow = true;
+            ICsvSink? sink = null;
 
-            if (_hasCsvHeaders && headers == null)
-            {   //  Empty blob
-                return;
-            }
-            else
+            await foreach (var row in _source.RetrieveRowsAsync())
             {
-                var sink = _sinkFactory(headers);
-
-                do
+                if (isFirstRow)
                 {
-                    var row = await _source.RetrieveRowAsync();
-
-                    if (row == null)
-                    {   //  Source has completed
-                        await sink.CompleteAsync();
-             
-                        return;
+                    if (_hasCsvHeaders)
+                    {
+                        sink = _sinkFactory(row);
                     }
                     else
                     {
-                        await sink.PushRowAsync(row);
+                        sink = _sinkFactory(null);
+                        await sink!.PushRowAsync(row);
                     }
                 }
-                while (true);
+                else
+                {
+                    await sink!.PushRowAsync(row);
+                }
+            }
+            //  If blob is empty, the sink will be null
+            if (sink != null)
+            {
+                await sink!.CompleteAsync();
             }
         }
     }

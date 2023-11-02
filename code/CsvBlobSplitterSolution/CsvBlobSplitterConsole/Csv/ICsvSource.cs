@@ -2,6 +2,6 @@
 {
     public interface ICsvSource
     {
-        Task<IEnumerable<string>?> RetrieveRowAsync();
+        IAsyncEnumerable<IEnumerable<string>> RetrieveRowsAsync();
     }
 }

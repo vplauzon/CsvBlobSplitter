@@ -13,7 +13,7 @@ namespace CsvBlobSplitterConsole.Csv
             _compression = compression;
         }
 
-        Task<IEnumerable<string>?> ICsvSource.RetrieveRowAsync()
+        IAsyncEnumerable<IEnumerable<string>> ICsvSource.RetrieveRowsAsync()
         {
             throw new NotImplementedException();
         }

@@ -80,6 +80,7 @@ namespace CsvBlobSplitterConsole.Csv
             while (!_isCompleted)
             {
                 await ProcessShardAsync(shardCounter);
+                ++shardCounter;
             }
         }
 
@@ -111,12 +112,16 @@ namespace CsvBlobSplitterConsole.Csv
                     {
                         await WriteRowAsync(csvWriter, row);
                         ++rowCount;
+                        Interlocked.Add(ref _queueSize, -row.Sum(i => i.Length));
                     }
                     else
                     {
                         await Task.Delay(WAIT_TIME);
                     }
                 }
+                Console.WriteLine(
+                    $"Sealing shard '{shardName}' with {rowCount} rows & "
+                    + $"{countingStream.Position/1024/1024} Mb");
             }
         }
 

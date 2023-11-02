@@ -1,11 +1,13 @@
-﻿namespace CsvBlobSplitterConsole.Csv
+﻿using Azure.Storage.Blobs.Specialized;
+
+namespace CsvBlobSplitterConsole.Csv
 {
     internal class CsvBlobSource : ICsvSource
     {
-        private readonly Uri _sourceBlob;
+        private readonly BlockBlobClient _sourceBlob;
         private readonly BlobCompression _compression;
 
-        public CsvBlobSource(Uri sourceBlob, BlobCompression compression)
+        public CsvBlobSource(BlockBlobClient sourceBlob, BlobCompression compression)
         {
             _sourceBlob = sourceBlob;
             _compression = compression;

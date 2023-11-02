@@ -1,4 +1,6 @@
-﻿using CsvBlobSplitterConsole.Csv;
+﻿using Azure.Identity;
+using Azure.Storage.Blobs.Specialized;
+using CsvBlobSplitterConsole.Csv;
 
 namespace CsvBlobSplitterConsole
 {
@@ -6,11 +8,24 @@ namespace CsvBlobSplitterConsole
     {
         public static IEtl Create(RunSettings runSettings)
         {
-            var source = new CsvBlobSource(runSettings.SourceBlob, runSettings.Compression);
+            var credentials = new DefaultAzureCredential();
+            var sourceBlobClient = new BlockBlobClient(runSettings.SourceBlob, credentials);
+            var destinationBlobClient = new BlockBlobClient(
+                runSettings.DestinationBlobPrefix!,
+                credentials);
+            var destinationBlobContainer =
+                destinationBlobClient.GetParentBlobContainerClient();
+            var destinationBlobPrefix = runSettings.DestinationBlobPrefix!
+                .ToString()
+                .Substring(destinationBlobContainer.Uri.ToString().Length);
+            var source = new CsvBlobSource(sourceBlobClient, runSettings.Compression);
 
             return new CsvEtl(
                 source,
-                (headers) => new CsvBlobSplit(runSettings.DestinationBlobPrefix!, headers),
+                (headers) => new CsvBlobSplit(
+                    destinationBlobContainer,
+                    destinationBlobPrefix,
+                    headers),
                 runSettings.HasCsvHeaders);
         }
     }

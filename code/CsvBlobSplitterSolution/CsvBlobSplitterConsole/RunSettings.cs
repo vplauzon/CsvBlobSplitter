@@ -52,11 +52,6 @@ namespace CsvBlobSplitterConsole
                 throw new NotSupportedException("No destination specified");
             }
 
-            if (maxRowsPerShard is null)
-            {
-                throw new ArgumentNullException(nameof(maxRowsPerShard));
-            }
-
             SourceBlob = sourceBlob;
             DestinationBlobPrefix = destinationBlobPrefix;
             Compression = compression ?? BlobCompression.None;

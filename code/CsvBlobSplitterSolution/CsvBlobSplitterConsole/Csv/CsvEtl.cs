@@ -55,8 +55,7 @@ namespace CsvBlobSplitterConsole.Csv
                     await sink!.PushRowAsync(row);
                     ++rowCount;
                 }
-                if (stopWatch.Elapsed.Seconds < lastElapsed.Seconds
-                    || (stopWatch.Elapsed.Seconds < 30 && lastElapsed.Seconds > 30))
+                if (stopWatch.Elapsed.Seconds / 10 != lastElapsed.Seconds / 10)
                 {
                     Console.WriteLine($"ETL:  {rowCount} rows at {stopWatch.Elapsed}");
                 }

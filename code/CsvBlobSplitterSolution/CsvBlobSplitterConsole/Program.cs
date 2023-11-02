@@ -13,7 +13,6 @@
             Console.WriteLine($"HasCsvHeaders:  {runSettings.HasCsvHeaders}");
             Console.WriteLine($"MaxRowsPerShard:  {runSettings.MaxRowsPerShard}");
             Console.WriteLine($"MaxMbPerShard:  {runSettings.MaxMbPerShard}");
-            Console.WriteLine($"MaxMbPerShard:  {runSettings.MaxMbPerShard}");
             Console.WriteLine();
 
             var etl = EtlFactory.Create(runSettings);

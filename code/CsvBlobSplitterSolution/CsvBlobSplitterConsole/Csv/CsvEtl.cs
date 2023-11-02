@@ -31,8 +31,9 @@ namespace CsvBlobSplitterConsole.Csv
             {
                 if (isFirstRow)
                 {
+                    isFirstRow = false;
                     if (_hasCsvHeaders)
-                    {
+                    {   //  Use first row as headers
                         sink = _sinkFactory(row);
                     }
                     else

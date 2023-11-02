@@ -37,6 +37,11 @@ namespace CsvBlobSplitterConsole
             BlobCompression? compression,
             bool? hasCsvHeaders)
         {
+            if (destinationBlobPrefix == null)
+            {
+                throw new NotSupportedException("No destination specified");
+            }
+
             SourceBlob = sourceBlob;
             DestinationBlobPrefix = destinationBlobPrefix;
             Compression = compression ?? BlobCompression.None;

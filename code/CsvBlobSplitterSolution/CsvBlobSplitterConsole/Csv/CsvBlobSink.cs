@@ -2,6 +2,7 @@
 using Azure.Storage.Blobs.Models;
 using CsvHelper;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO.Compression;
 
@@ -86,6 +87,7 @@ namespace CsvBlobSplitterConsole.Csv
 
         private async Task ProcessShardAsync(int shardCounter)
         {
+            var stopWatch = new Stopwatch();
             var writeOptions = new BlobOpenWriteOptions
             {
                 BufferSize = BUFFER_SIZE
@@ -94,6 +96,7 @@ namespace CsvBlobSplitterConsole.Csv
             var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
             var rowCount = 0;
 
+            stopWatch.Start();
             using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
             using (var gzipStream = new GZipStream(blobStream, CompressionLevel.Fastest))
             using (var countingStream = new ByteCountingStream(gzipStream))
@@ -121,7 +124,7 @@ namespace CsvBlobSplitterConsole.Csv
                 }
                 Console.WriteLine(
                     $"Sealing shard '{shardName}' with {rowCount} rows & "
-                    + $"{countingStream.Position/1024/1024} Mb");
+                    + $"{countingStream.Position/1024/1024} Mb in {stopWatch.Elapsed}");
             }
         }
 

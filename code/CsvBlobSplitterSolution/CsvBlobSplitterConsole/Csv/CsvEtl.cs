@@ -26,6 +26,7 @@ namespace CsvBlobSplitterConsole.Csv
         async Task IEtl.ProcessAsync()
         {
             var stopWatch = new Stopwatch();
+            var lastElapsed = stopWatch.Elapsed;
             var isFirstRow = true;
             var rowCount = (long)0;
             ICsvSink? sink = null;
@@ -54,7 +55,8 @@ namespace CsvBlobSplitterConsole.Csv
                     await sink!.PushRowAsync(row);
                     ++rowCount;
                 }
-                if (rowCount % 1000 == 0)
+                if (stopWatch.Elapsed.Seconds < lastElapsed.Seconds
+                    || (stopWatch.Elapsed.Seconds < 30 && lastElapsed.Seconds > 30))
                 {
                     Console.WriteLine($"ETL:  {rowCount} rows at {stopWatch.Elapsed}");
                 }
@@ -64,6 +66,7 @@ namespace CsvBlobSplitterConsole.Csv
             {
                 await sink!.CompleteAsync();
             }
+            Console.WriteLine($"ETL:  completed {rowCount} rows at {stopWatch.Elapsed}");
         }
     }
 }

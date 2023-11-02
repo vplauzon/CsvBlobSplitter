@@ -59,6 +59,7 @@ namespace CsvBlobSplitterConsole.Csv
                 {
                     Console.WriteLine($"ETL:  {rowCount} rows at {stopWatch.Elapsed}");
                 }
+                lastElapsed = stopWatch.Elapsed;
             }
             //  If blob is empty, the sink will be null
             if (sink != null)

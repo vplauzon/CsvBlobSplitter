@@ -88,7 +88,6 @@ namespace CsvBlobSplitterConsole.Csv
 
         private async Task ProcessShardAsync(int shardCounter)
         {
-            var stopWatch = new Stopwatch();
             var writeOptions = new BlobOpenWriteOptions
             {
                 BufferSize = WRITING_BUFFER_SIZE
@@ -97,7 +96,6 @@ namespace CsvBlobSplitterConsole.Csv
             var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
             var rowCount = 0;
 
-            stopWatch.Start();
             using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
             using (var gzipStream = new GZipStream(blobStream, CompressionLevel.Fastest))
             using (var bufferedStream = new BufferedStream(gzipStream, COMPRESSION_BUFFER_SIZE))
@@ -126,7 +124,7 @@ namespace CsvBlobSplitterConsole.Csv
                 }
                 Console.WriteLine(
                     $"Sealing shard '{shardName}' with {rowCount} rows & "
-                    + $"{countingStream.Position/1024/1024} Mb in {stopWatch.Elapsed}");
+                    + $"{countingStream.Position/1024/1024} Mb");
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,9 +25,12 @@ namespace CsvBlobSplitterConsole.Csv
 
         async Task IEtl.ProcessAsync()
         {
+            var stopWatch = new Stopwatch();
             var isFirstRow = true;
+            var rowCount = (long)0;
             ICsvSink? sink = null;
 
+            stopWatch.Start();
             await foreach (var row in _source.RetrieveRowsAsync())
             {
                 if (isFirstRow)
@@ -42,11 +46,17 @@ namespace CsvBlobSplitterConsole.Csv
                         sink = _sinkFactory(null);
                         sink.Start();
                         await sink!.PushRowAsync(row);
+                        ++rowCount;
                     }
                 }
                 else
                 {
                     await sink!.PushRowAsync(row);
+                    ++rowCount;
+                }
+                if (rowCount % 1000 == 0)
+                {
+                    Console.WriteLine($"ETL:  {rowCount} rows at {stopWatch.Elapsed}");
                 }
             }
             //  If blob is empty, the sink will be null

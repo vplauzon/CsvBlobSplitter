@@ -88,7 +88,8 @@ namespace CsvBlobSplitterConsole.Csv
 
             using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
             using (var gzipStream = new GZipStream(blobStream, CompressionLevel.Fastest))
-            using (var textWriter = new StreamWriter(gzipStream))
+            using (var countingStream = new ByteCountingStream(gzipStream))
+            using (var textWriter = new StreamWriter(countingStream))
             using (var csvWriter = new CsvWriter(textWriter, CultureInfo.InvariantCulture))
             {
                 if (_headers != null)

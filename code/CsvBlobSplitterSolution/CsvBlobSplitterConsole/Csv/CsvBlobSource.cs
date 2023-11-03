@@ -49,7 +49,10 @@ namespace CsvBlobSplitterConsole.Csv
                 //case BlobCompression.Gzip:
                 case BlobCompression.Zip:
                     var archive = new ZipArchive(readStream);
-                    var entries = archive.Entries;
+                    var entries = archive
+                        .Entries
+                        .Where(e => !string.IsNullOrWhiteSpace(e.Name))
+                        .Where(e => e.Length > 0);
 
                     if (!entries.Any())
                     {

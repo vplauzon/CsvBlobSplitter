@@ -22,11 +22,11 @@ jobs:
     - name: Install dependencies
       run: dotnet restore code
     - name: .NET Build Console
-      run: dotnet build code/EhMaxIngestionConsole --configuration Release --no-restore
+      run: dotnet build code/CsvBlobSplitter --configuration Release --no-restore
     - name: Copy binaries
       run: |
         mkdir bin
-        cp code/EhMaxIngestionConsole/bin/Release/net*/* bin
+        cp code/CsvBlobSplitter/bin/Release/net*/* bin
 
     - name: Azure Login
       run: az login --service-principal -u ${{ secrets.DEPLOY_CLIENT_ID }} -p ${{ secrets.DEPLOY_SECRET }} --tenant ${{ secrets.TENANT_ID }}
@@ -43,13 +43,6 @@ jobs:
     # See https://learn.microsoft.com/en-us/azure/container-registry/container-registry-quickstart-task-cli
     - name:  Docker Build / Push workbench
       run:  |
-        az acr build --image kusto/eh-max-ingestion:latest \
+        az acr build --image kusto/kusto-split:latest \
           --registry $registry \
           --file deployment/docker/Dockerfile bin
-
-    # - name: Deploy infra
-    #   run: |
-    #     cd deployment/infra
-    #     bash deploy-infra.sh ${{ secrets.RESOURCE_GROUP }} $environment \
-    #     ${{ steps.patch-version-workbench.outputs.full-version }} \
-    #     ${{ secrets.TENANT_ID }}  ${{ secrets.APP_ID }} ${{ secrets.APP_SECRET }}

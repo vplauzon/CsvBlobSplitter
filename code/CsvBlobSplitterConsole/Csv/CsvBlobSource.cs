@@ -51,6 +51,7 @@ namespace CsvBlobSplitterConsole.Csv
                     if (amount != 0)
                     {
                         await blobStream.WriteAsync(buffer, 0, amount);
+                        ++counter;
                         Console.WriteLine($"Counter:  {counter}");
                     }
                     else

@@ -43,20 +43,27 @@ namespace CsvBlobSplitterConsole.Csv
             {
                 var buffer = new byte[200 * 1024 * 1024];
                 var size = (long)0;
+                var sentinel = true;
 
-                while (true)
+                while (sentinel)
                 {
                     var amount = await uncompressedReader.ReadAsync(buffer, 0, buffer.Length);
 
                     if (amount != 0)
                     {
+
                         await blobStream.WriteAsync(buffer, 0, amount);
                         size += amount;
-                        Console.WriteLine($"Counter:  {size / 1024 / 1024}");
+                        var mb = size / 1024 / 1024;
+
+                        if (mb % 200 == 0)
+                        {
+                            Console.WriteLine($"Counter:  {mb}");
+                        }
                     }
                     else
                     {
-                        throw new NotImplementedException("Completed ;)");
+                        sentinel = false;
                     }
                     if (amount > 300 * 1024 * 1024)
                     {

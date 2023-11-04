@@ -40,6 +40,7 @@ namespace CsvBlobSplitterConsole.Csv
             //    }
             //}
             using (var blobStream = await _sourceBlob.GetParentBlobContainerClient().GetBlobClient("samples-original/adx_file.gz").OpenWriteAsync(true))
+            using (var compressedStream = new GZipStream(blobStream, CompressionLevel.SmallestSize))
             {
                 var buffer = new byte[200 * 1024 * 1024];
                 var size = (long)0;
@@ -52,7 +53,7 @@ namespace CsvBlobSplitterConsole.Csv
                     if (amount != 0)
                     {
 
-                        await blobStream.WriteAsync(buffer, 0, amount);
+                        await compressedStream.WriteAsync(buffer, 0, amount);
                         size += amount;
                         var mb = size / 1024 / 1024;
 

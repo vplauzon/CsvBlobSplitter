@@ -42,7 +42,7 @@ namespace CsvBlobSplitterConsole.Csv
             using (var blobStream = await _sourceBlob.GetParentBlobContainerClient().GetBlobClient("samples-original/adx_file.gz").OpenWriteAsync(true))
             {
                 var buffer = new byte[200 * 1024 * 1024];
-                var counter = 0;
+                var size = (long)0;
 
                 while (true)
                 {
@@ -51,8 +51,8 @@ namespace CsvBlobSplitterConsole.Csv
                     if (amount != 0)
                     {
                         await blobStream.WriteAsync(buffer, 0, amount);
-                        ++counter;
-                        Console.WriteLine($"Counter:  {counter}");
+                        size += amount;
+                        Console.WriteLine($"Counter:  {size / 1024 / 1024}");
                     }
                     else
                     {

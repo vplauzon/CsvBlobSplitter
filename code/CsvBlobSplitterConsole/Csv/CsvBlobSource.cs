@@ -41,7 +41,7 @@ namespace CsvBlobSplitterConsole.Csv
             //}
             using (var blobStream = await _sourceBlob.GetParentBlobContainerClient().GetBlobClient("samples-original/adx_file.gz").OpenWriteAsync(true))
             {
-                var buffer = new byte[1024 * 1024];
+                var buffer = new byte[200 * 1024 * 1024];
                 var counter = 0;
 
                 while (true)
@@ -58,7 +58,7 @@ namespace CsvBlobSplitterConsole.Csv
                     {
                         throw new NotImplementedException("Completed ;)");
                     }
-                    if(amount>1024*1025)
+                    if (amount > 300 * 1024 * 1024)
                     {
                         yield return Enumerable.Empty<string>();
                     }

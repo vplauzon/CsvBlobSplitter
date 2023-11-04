@@ -3,6 +3,7 @@ using Azure.Storage.Blobs.Specialized;
 using CsvHelper;
 using System.Globalization;
 using System.IO.Compression;
+using static Kusto.Cloud.Platform.Data.ExtendedDataReader;
 
 namespace CsvBlobSplitterConsole.Csv
 {
@@ -28,14 +29,38 @@ namespace CsvBlobSplitterConsole.Csv
 
             using (var readStream = await _sourceBlob.OpenReadAsync(readOptions))
             using (var uncompressedReader = UncompressStream(readStream))
-            using (var textReader = new StreamReader(uncompressedReader))
-            using (var csvParser = new CsvParser(textReader, CultureInfo.InvariantCulture))
-            {
-                while (await csvParser.ReadAsync())
-                {
-                    var record = csvParser.Record!;
+            //using (var textReader = new StreamReader(uncompressedReader))
+            //using (var csvParser = new CsvParser(textReader, CultureInfo.InvariantCulture))
+            //{
+            //    while (await csvParser.ReadAsync())
+            //    {
+            //        var record = csvParser.Record!;
 
-                    yield return record;
+            //        yield return record;
+            //    }
+            //}
+            using (var blobStream = await _sourceBlob.GetParentBlobContainerClient().GetBlobClient("samples-original/adx_file.gz").OpenWriteAsync(true))
+            {
+                var buffer = new byte[1024 * 1024];
+                var counter = 0;
+
+                while (true)
+                {
+                    var amount = await uncompressedReader.ReadAsync(buffer, 0, buffer.Length);
+
+                    if (amount != 0)
+                    {
+                        await blobStream.WriteAsync(buffer, 0, amount);
+                        Console.WriteLine($"Counter:  {counter}");
+                    }
+                    else
+                    {
+                        throw new NotImplementedException("Completed ;)");
+                    }
+                    if(amount>1024*1025)
+                    {
+                        yield return Enumerable.Empty<string>();
+                    }
                 }
             }
         }

@@ -3,7 +3,6 @@ using Azure.Storage.Blobs.Specialized;
 using CsvHelper;
 using System.Globalization;
 using System.IO.Compression;
-using static Kusto.Cloud.Platform.Data.ExtendedDataReader;
 
 namespace CsvBlobSplitterConsole.Csv
 {
@@ -29,46 +28,14 @@ namespace CsvBlobSplitterConsole.Csv
 
             using (var readStream = await _sourceBlob.OpenReadAsync(readOptions))
             using (var uncompressedReader = UncompressStream(readStream))
-            //using (var textReader = new StreamReader(uncompressedReader))
-            //using (var csvParser = new CsvParser(textReader, CultureInfo.InvariantCulture))
-            //{
-            //    while (await csvParser.ReadAsync())
-            //    {
-            //        var record = csvParser.Record!;
-
-            //        yield return record;
-            //    }
-            //}
-            using (var blobStream = await _sourceBlob.GetParentBlobContainerClient().GetBlobClient("samples-original/adx_file.gz").OpenWriteAsync(true))
+            using (var textReader = new StreamReader(uncompressedReader))
+            using (var csvParser = new CsvParser(textReader, CultureInfo.InvariantCulture))
             {
-                var buffer = new byte[200 * 1024 * 1024];
-                var size = (long)0;
-                var sentinel = true;
-
-                while (sentinel)
+                while (await csvParser.ReadAsync())
                 {
-                    var amount = await uncompressedReader.ReadAsync(buffer, 0, buffer.Length);
+                    var record = csvParser.Record!;
 
-                    if (amount != 0)
-                    {
-
-                        await blobStream.WriteAsync(buffer, 0, amount);
-                        size += amount;
-                        var mb = size / 1024 / 1024;
-
-                        if (mb % 200 == 0)
-                        {
-                            Console.WriteLine($"Counter:  {mb}");
-                        }
-                    }
-                    else
-                    {
-                        sentinel = false;
-                    }
-                    if (amount > 300 * 1024 * 1024)
-                    {
-                        yield return Enumerable.Empty<string>();
-                    }
+                    yield return record;
                 }
             }
         }

@@ -46,7 +46,8 @@ namespace CsvBlobSplitterConsole.Csv
             {
                 case BlobCompression.None:
                     return readStream;
-                //case BlobCompression.Gzip:
+                case BlobCompression.Gzip:
+                    return new GZipStream(readStream, CompressionMode.Decompress);
                 case BlobCompression.Zip:
                     var archive = new ZipArchive(readStream);
                     var entries = archive

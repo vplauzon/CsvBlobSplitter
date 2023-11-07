@@ -8,13 +8,17 @@ namespace CsvBlobSplitterConsole
 {
     internal class RunSettings
     {
+        public Format Format { get; }
+
         public Uri SourceBlob { get; }
 
         public Uri? DestinationBlobPrefix { get; }
 
-        public BlobCompression Compression { get; }
+        public BlobCompression InputCompression { get; }
+        
+        public BlobCompression OutputCompression { get; }
 
-        public bool HasCsvHeaders { get; }
+        public bool HasHeaders { get; }
 
         public int MaxRowsPerShard { get; }
 
@@ -23,27 +27,33 @@ namespace CsvBlobSplitterConsole
         #region Constructors
         public static RunSettings FromEnvironmentVariables()
         {
+            var format = GetEnum<Format>("Format", false);
             var sourceBlob = GetUri("SourceBlob");
             var destinationBlobPrefix = GetUri("DestinationBlobPrefix", false);
-            var compression = GetEnum<BlobCompression>("Compression", false);
-            var hasCsvHeaders = GetBool("HasCsvHeaders", false);
+            var inputCompression = GetEnum<BlobCompression>("InputCompression", false);
+            var outputCompression = GetEnum<BlobCompression>("OutputCompression", false);
+            var hasHeaders = GetBool("CsvHeaders", false);
             var maxRowsPerShard = GetInt("MaxRowsPerShard", false);
             var maxMbPerShard = GetInt("MaxMbPerShard", false);
 
             return new RunSettings(
+                format,
                 sourceBlob,
                 destinationBlobPrefix,
-                compression,
-                hasCsvHeaders,
+                inputCompression,
+                outputCompression,
+                hasHeaders,
                 maxRowsPerShard,
                 maxMbPerShard);
         }
 
         public RunSettings(
+            Format? format,
             Uri sourceBlob,
             Uri? destinationBlobPrefix,
-            BlobCompression? compression,
-            bool? hasCsvHeaders,
+            BlobCompression? inputCompression,
+            BlobCompression? outputCompression,
+            bool? hasHeaders,
             int? maxRowsPerShard,
             int? maxMbPerShard)
         {
@@ -52,10 +62,12 @@ namespace CsvBlobSplitterConsole
                 throw new NotSupportedException("No destination specified");
             }
 
+            Format = format?? Format.Csv;
             SourceBlob = sourceBlob;
             DestinationBlobPrefix = destinationBlobPrefix;
-            Compression = compression ?? BlobCompression.None;
-            HasCsvHeaders = hasCsvHeaders ?? true;
+            InputCompression = inputCompression ?? BlobCompression.None;
+            OutputCompression = outputCompression ?? BlobCompression.None;
+            HasHeaders = hasHeaders ?? true;
             MaxRowsPerShard = maxRowsPerShard ?? 1000000;
             MaxMbPerShard = maxMbPerShard ?? 200;
         }

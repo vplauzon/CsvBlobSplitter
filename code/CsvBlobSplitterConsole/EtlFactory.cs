@@ -18,7 +18,7 @@ namespace CsvBlobSplitterConsole
             var destinationBlobPrefix = runSettings.DestinationBlobPrefix!
                 .ToString()
                 .Substring(destinationBlobContainer.Uri.ToString().Length);
-            var source = new CsvBlobSource(sourceBlobClient, runSettings.Compression);
+            var source = new CsvBlobSource(sourceBlobClient, runSettings.InputCompression);
 
             return new CsvEtl(
                 source,
@@ -28,7 +28,7 @@ namespace CsvBlobSplitterConsole
                     runSettings.MaxRowsPerShard,
                     runSettings.MaxMbPerShard,
                     headers),
-                runSettings.HasCsvHeaders);
+                runSettings.HasHeaders);
         }
     }
 }

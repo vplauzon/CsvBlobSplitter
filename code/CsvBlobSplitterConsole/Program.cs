@@ -7,10 +7,12 @@
             var runSettings = RunSettings.FromEnvironmentVariables();
 
             Console.WriteLine();
+            Console.WriteLine($"Format:  {runSettings.Format}");
             Console.WriteLine($"SourceBlob:  {runSettings.SourceBlob}");
             Console.WriteLine($"DestinationBlobPrefix:  {runSettings.DestinationBlobPrefix}");
-            Console.WriteLine($"Compression:  {runSettings.Compression}");
-            Console.WriteLine($"HasCsvHeaders:  {runSettings.HasCsvHeaders}");
+            Console.WriteLine($"Compression:  {runSettings.InputCompression}");
+            Console.WriteLine($"Compression:  {runSettings.OutputCompression}");
+            Console.WriteLine($"HasCsvHeaders:  {runSettings.HasHeaders}");
             Console.WriteLine($"MaxRowsPerShard:  {runSettings.MaxRowsPerShard}");
             Console.WriteLine($"MaxMbPerShard:  {runSettings.MaxMbPerShard}");
             Console.WriteLine();

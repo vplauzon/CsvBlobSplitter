@@ -13,7 +13,8 @@ namespace CsvBlobSplitterConsole.LineBased
 {
     internal class LineBasedSource : ISource
     {
-        private const int STORAGE_BUFFER_SIZE = 200000000;
+        private const int STORAGE_BUFFER_SIZE = 100000000;
+        private const int PARSING_BUFFER_SIZE = 100000000;
 
         private readonly BlockBlobClient _sourceBlob;
         private readonly BlobCompression _compression;
@@ -30,13 +31,37 @@ namespace CsvBlobSplitterConsole.LineBased
             {
                 BufferSize = STORAGE_BUFFER_SIZE
             };
+            var buffer = new byte[STORAGE_BUFFER_SIZE];
+            var readingIndex = 0;
+            //var parsingIndex = 0;
+            var sinkIndex = 0;
 
             using (var readStream = await _sourceBlob.OpenReadAsync(readOptions))
             using (var uncompressedStream = UncompressStream(readStream))
             {
-                //uncompressedStream.ReadAsync();
-                throw new NotImplementedException();
+                var maxReadSize = GetAvailBufferSize(readingIndex, sinkIndex);
+
+                if (maxReadSize > 0)
+                {
+                    var readLength = await uncompressedStream.ReadAsync(
+                        buffer,
+                        readingIndex,
+                        maxReadSize);
+
+                    throw new NotImplementedException();
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
             }
+        }
+
+        private int GetAvailBufferSize(int readingIndex, int sinkIndex)
+        {
+            return readingIndex < sinkIndex
+                ? sinkIndex - readingIndex
+                : PARSING_BUFFER_SIZE + sinkIndex - readingIndex;
         }
 
         private Stream UncompressStream(Stream readStream)

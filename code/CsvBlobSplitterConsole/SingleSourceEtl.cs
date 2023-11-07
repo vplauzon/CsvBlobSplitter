@@ -8,9 +8,16 @@ namespace CsvBlobSplitterConsole.LineBased
 {
     internal class SingleSourceEtl : IEtl
     {
-        Task IEtl.ProcessAsync()
+        private readonly ISource _source;
+
+        public SingleSourceEtl(ISource source)
         {
-            throw new NotImplementedException();
+            _source = source;
+        }
+
+        async Task IEtl.ProcessAsync()
+        {
+            await _source.ProcessSourceAsync();
         }
     }
 }

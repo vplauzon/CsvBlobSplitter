@@ -1,6 +1,7 @@
 ﻿using Azure.Identity;
 using Azure.Storage.Blobs.Specialized;
 using CsvBlobSplitterConsole.Csv;
+using CsvBlobSplitterConsole.LineBased;
 
 namespace CsvBlobSplitterConsole
 {
@@ -18,17 +19,37 @@ namespace CsvBlobSplitterConsole
             var destinationBlobPrefix = runSettings.DestinationBlobPrefix!
                 .ToString()
                 .Substring(destinationBlobContainer.Uri.ToString().Length);
-            var source = new CsvBlobSource(sourceBlobClient, runSettings.InputCompression);
 
-            return new CsvEtl(
-                source,
-                (headers) => new CsvBlobSink(
-                    destinationBlobContainer,
-                    destinationBlobPrefix,
-                    runSettings.MaxRowsPerShard,
-                    runSettings.MaxMbPerShard,
-                    headers),
-                runSettings.HasHeaders);
+            switch (runSettings.Format)
+            {
+                case Format.LineBased:
+                    {
+                        var source = new LineBasedSource(
+                            sourceBlobClient,
+                            runSettings.InputCompression);
+
+                        return new SingleSourceEtl(source);
+                    }
+                case Format.Csv:
+                    {
+                        var source = new CsvBlobSource(
+                            sourceBlobClient,
+                            runSettings.InputCompression);
+
+                        return new CsvEtl(
+                            source,
+                            (headers) => new CsvBlobSink(
+                                destinationBlobContainer,
+                                destinationBlobPrefix,
+                                runSettings.MaxRowsPerShard,
+                                runSettings.MaxMbPerShard,
+                                headers),
+                            runSettings.HasHeaders);
+                    }
+
+                default:
+                    throw new NotSupportedException($"Format '{runSettings.Format}'");
+            }
         }
     }
 }

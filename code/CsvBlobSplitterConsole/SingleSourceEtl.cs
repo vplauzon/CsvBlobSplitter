@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CsvBlobSplitterConsole.LineBased
 {
-    internal class LineEtl : IEtl
+    internal class SingleSourceEtl : IEtl
     {
         Task IEtl.ProcessAsync()
         {

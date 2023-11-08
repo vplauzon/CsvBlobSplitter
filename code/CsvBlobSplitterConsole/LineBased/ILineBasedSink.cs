@@ -10,6 +10,6 @@ namespace CsvBlobSplitterConsole.LineBased
     {
         bool HasHeaders { get; }
 
-        void PushFragment(LineBasedFragment fragment);
+        Task ProcessAsync(WaitingQueue<LineBasedFragment> fragmentQueue);
     }
 }

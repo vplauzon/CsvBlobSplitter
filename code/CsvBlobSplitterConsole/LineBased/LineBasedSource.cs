@@ -114,6 +114,8 @@ namespace CsvBlobSplitterConsole.LineBased
             var lastLineStopIndex = (int?)null;
             var isFirstLine = true;
             var fragmentQueue = new Queue<LineBasedFragment>();
+            var sharedFragmentQueue = new WaitingQueue<LineBasedFragment>();
+            var sinkTask = _sink.ProcessAsync(sharedFragmentQueue);
 
             while (!bufferQueue.CompletedTask.IsCompleted)
             {
@@ -132,7 +134,8 @@ namespace CsvBlobSplitterConsole.LineBased
                                     buffer,
                                     fragmentStartIndex,
                                     parsingIndex + 1,
-                                    fragmentQueue);
+                                    fragmentQueue,
+                                    sharedFragmentQueue);
                                 fragmentStartIndex = parsingIndex + 1;
                                 lastLineStopIndex = null;
                                 isFirstLine = false;
@@ -152,7 +155,8 @@ namespace CsvBlobSplitterConsole.LineBased
                         buffer,
                         fragmentStartIndex,
                         lastLineStopIndex.Value + 1,
-                        fragmentQueue);
+                        fragmentQueue,
+                        sharedFragmentQueue);
                     fragmentStartIndex = parsingIndex + 1;
                     lastLineStopIndex = null;
                     await Task.WhenAny(bufferQueue.CompletedTask, newItemTask);
@@ -160,6 +164,7 @@ namespace CsvBlobSplitterConsole.LineBased
                 ReturnBuffer(fragmentQueue, bufferReturnQueue);
             }
             bufferReturnQueue.Complete();
+            await sinkTask;
         }
 
         private void ReturnBuffer(
@@ -184,11 +189,12 @@ namespace CsvBlobSplitterConsole.LineBased
             byte[] buffer,
             int startIndex,
             int endIndex,
-            Queue<LineBasedFragment> fragmentQueue)
+            Queue<LineBasedFragment> fragmentQueue,
+            WaitingQueue<LineBasedFragment> sharedFragmentQueue)
         {
             var fragment = CreateFragment(buffer, startIndex, endIndex);
 
-            _sink.PushFragment(fragment);
+            sharedFragmentQueue.Enqueue(fragment);
             fragmentQueue.Enqueue(fragment);
         }
 

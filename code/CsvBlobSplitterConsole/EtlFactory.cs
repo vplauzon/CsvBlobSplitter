@@ -28,7 +28,7 @@ namespace CsvBlobSplitterConsole
                         var sink = new LineBasedBlobSink(
                             destinationBlobContainer,
                             destinationBlobPrefix,
-                            runSettings.MaxRowsPerShard,
+                            runSettings.OutputCompression,
                             runSettings.MaxMbPerShard,
                             runSettings.HasHeaders);
                         var source = new LineBasedSource(

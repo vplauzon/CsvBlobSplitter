@@ -29,5 +29,10 @@ namespace CsvBlobSplitterConsole
 
         public bool TryDequeue([MaybeNullWhen(false)] out T result)
             => _queue.TryDequeue(out result);
+
+        public void Complete()
+        {
+            _completedSource.SetResult();
+        }
     }
 }

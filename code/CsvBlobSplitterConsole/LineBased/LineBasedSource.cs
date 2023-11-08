@@ -16,8 +16,18 @@ namespace CsvBlobSplitterConsole.LineBased
         #region Inner Types
         #endregion
 
-        private const int STORAGE_BUFFER_SIZE = 100 * 1024 * 1024;
-        private const int PARSING_BUFFER_SIZE = 10 * 1024 * 1024;
+        private const int STORAGE_BUFFER_SIZE =
+#if DEBUG
+            10 * 1024 * 1024;
+#else
+            100 * 1024 * 1024;
+#endif
+        private const int PARSING_BUFFER_SIZE =
+#if DEBUG
+            10 * 1024 * 1024;
+#else
+            10 * 1024 * 1024;
+#endif
         private const int SINK_BUFFER_SIZE = 1024 * 1024;
 
         private readonly BlockBlobClient _sourceBlob;
@@ -44,7 +54,11 @@ namespace CsvBlobSplitterConsole.LineBased
             var readingIndex = 0;
             var sinkIndex = 0;
             var bufferQueue = new WaitingQueue<int>();
-            var parsingTask = ParseBufferAsync(buffer, bufferQueue);
+            var bufferReturnQueue = new WaitingQueue<int>();
+            var parsingTask = Task.Run(() => ParseBufferAsync(
+                buffer,
+                bufferQueue,
+                bufferReturnQueue));
 
             using (var readStream = await _sourceBlob.OpenReadAsync(readOptions))
             using (var uncompressedStream = UncompressStream(readStream))
@@ -62,6 +76,7 @@ namespace CsvBlobSplitterConsole.LineBased
 
                         if (readLength == 0)
                         {
+                            bufferQueue.Complete();
                             await parsingTask;
                             return;
                         }
@@ -69,21 +84,36 @@ namespace CsvBlobSplitterConsole.LineBased
                         {
                             bufferQueue.Enqueue(readLength);
                         }
+                        readingIndex += readLength;
                     }
                     else
                     {
-                        return;
+                        var newItemTask = bufferReturnQueue.AwaitNewItemTask;
+
+                        while (bufferReturnQueue.TryDequeue(out var returnLength))
+                        {
+                            sinkIndex += returnLength;
+                        }
+                        sinkIndex = sinkIndex % PARSING_BUFFER_SIZE;
+                        if (IndexDistance(readingIndex, sinkIndex) == 0)
+                        {
+                            await newItemTask;
+                        }
                     }
                 }
             }
         }
 
-        private async Task ParseBufferAsync(byte[] buffer, WaitingQueue<int> bufferQueue)
+        private async Task ParseBufferAsync(
+            byte[] buffer,
+            WaitingQueue<int> bufferQueue,
+            WaitingQueue<int> bufferReturnQueue)
         {
             var fragmentStartIndex = 0;
             var parsingIndex = 0;
             var lastLineStopIndex = (int?)null;
             var isFirstLine = true;
+            var fragmentQueue = new Queue<LineBasedFragment>();
 
             while (!bufferQueue.CompletedTask.IsCompleted)
             {
@@ -93,12 +123,16 @@ namespace CsvBlobSplitterConsole.LineBased
                 {
                     for (var i = 0; i != readLength; ++i)
                     {
-                        if (buffer[parsingIndex] == (char)'\n')
+                        if (buffer[parsingIndex] == '\n')
                         {
                             if (IndexDistance(fragmentStartIndex, parsingIndex) > SINK_BUFFER_SIZE
                                 || (isFirstLine && _sink.HasHeaders))
                             {
-                                PushFragment(buffer, fragmentStartIndex, parsingIndex + 1);
+                                PushFragment(
+                                    buffer,
+                                    fragmentStartIndex,
+                                    parsingIndex + 1,
+                                    fragmentQueue);
                                 fragmentStartIndex = parsingIndex + 1;
                                 lastLineStopIndex = null;
                                 isFirstLine = false;
@@ -114,19 +148,48 @@ namespace CsvBlobSplitterConsole.LineBased
                 }
                 else if (lastLineStopIndex != null)
                 {
-                    PushFragment(buffer, fragmentStartIndex, lastLineStopIndex.Value + 1);
+                    PushFragment(
+                        buffer,
+                        fragmentStartIndex,
+                        lastLineStopIndex.Value + 1,
+                        fragmentQueue);
                     fragmentStartIndex = parsingIndex + 1;
                     lastLineStopIndex = null;
                     await Task.WhenAny(bufferQueue.CompletedTask, newItemTask);
                 }
+                ReturnBuffer(fragmentQueue, bufferReturnQueue);
+            }
+            bufferReturnQueue.Complete();
+        }
+
+        private void ReturnBuffer(
+            Queue<LineBasedFragment> fragmentQueue,
+            WaitingQueue<int> bufferReturnQueue)
+        {
+            var totalLength = 0;
+
+            while (fragmentQueue.TryPeek(out var fragment)
+                && fragment.ReleasedTask.IsCompleted)
+            {
+                fragment = fragmentQueue.Dequeue();
+                totalLength += fragment.FragmentBytes.Count();
+            }
+            if (totalLength > 0)
+            {
+                bufferReturnQueue.Enqueue(totalLength);
             }
         }
 
-        private void PushFragment(byte[] buffer, int startIndex, int endIndex)
+        private void PushFragment(
+            byte[] buffer,
+            int startIndex,
+            int endIndex,
+            Queue<LineBasedFragment> fragmentQueue)
         {
             var fragment = CreateFragment(buffer, startIndex, endIndex);
 
             _sink.PushFragment(fragment);
+            fragmentQueue.Enqueue(fragment);
         }
 
         private LineBasedFragment CreateFragment(byte[] buffer, int startIndex, int endIndex)

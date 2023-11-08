@@ -2,6 +2,7 @@
 using Azure.Storage.Blobs.Specialized;
 using CsvBlobSplitterConsole.Csv;
 using CsvBlobSplitterConsole.LineBased;
+using System.Reflection.PortableExecutable;
 
 namespace CsvBlobSplitterConsole
 {
@@ -24,9 +25,16 @@ namespace CsvBlobSplitterConsole
             {
                 case Format.LineBased:
                     {
+                        var sink = new LineBasedBlobSink(
+                            destinationBlobContainer,
+                            destinationBlobPrefix,
+                            runSettings.MaxRowsPerShard,
+                            runSettings.MaxMbPerShard,
+                            runSettings.HasHeaders);
                         var source = new LineBasedSource(
                             sourceBlobClient,
-                            runSettings.InputCompression);
+                            runSettings.InputCompression,
+                            sink);
 
                         return new SingleSourceEtl(source);
                     }

@@ -49,7 +49,7 @@ namespace CsvBlobSplitterConsole.Text
                 {
                     var i = 0;
                     var lastPushIndex = 0;
-                    var fragmentBlock = inputResult.Item.FragmentBlock;
+                    var fragmentBlock = inputResult.Item!.FragmentBlock;
 
                     if (fragmentBlock == null)
                     {
@@ -95,6 +95,11 @@ namespace CsvBlobSplitterConsole.Text
             var fragment = outputFragmentBytes is MemoryBlock block
                 ? new TextFragment(block, block)
                 : new TextFragment(outputFragmentBytes, null);
+
+            if (fragment.FragmentBytes == null)
+            {
+                throw new ArgumentNullException(nameof(fragment.FragmentBytes));
+            }
 
             outputFragmentQueue.Enqueue(fragment);
         }

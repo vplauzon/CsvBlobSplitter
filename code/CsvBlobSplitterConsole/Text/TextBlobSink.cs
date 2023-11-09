@@ -87,7 +87,7 @@ namespace CsvBlobSplitterConsole.LineBased
 
             if (!fragmentResult.IsCompleted)
             {
-                var fragment = fragmentResult.Item;
+                var fragment = fragmentResult.Item!;
                 var writeOptions = new BlobOpenWriteOptions
                 {
                     BufferSize = WRITING_BUFFER_SIZE
@@ -189,7 +189,7 @@ namespace CsvBlobSplitterConsole.LineBased
 
             if (!fragmentResult.IsCompleted)
             {
-                var header = fragmentResult.Item.FragmentBytes.ToArray();
+                var header = fragmentResult.Item!.FragmentBytes.ToArray();
 
                 releaseQueue.Enqueue(header.Length);
 

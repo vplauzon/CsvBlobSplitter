@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CsvBlobSplitterConsole.LineBased
 {
-    internal struct TextFragment
+    internal class TextFragment
     {
         private readonly TaskCompletionSource _releaseSource = new();
 

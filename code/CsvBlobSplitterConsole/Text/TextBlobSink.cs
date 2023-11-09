@@ -33,7 +33,7 @@ namespace CsvBlobSplitterConsole.LineBased
         }
         #endregion
 
-        private const int WRITING_BUFFER_SIZE = 200 * 1024 * 1024;
+        private const int WRITING_BUFFER_SIZE = 20 * 1024 * 1024;
 
         private readonly BlobContainerClient _destinationBlobContainer;
         private readonly string _destinationBlobPrefix;

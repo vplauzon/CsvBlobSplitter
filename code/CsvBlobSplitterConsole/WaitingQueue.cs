@@ -10,13 +10,15 @@ namespace CsvBlobSplitterConsole
 {
     internal class WaitingQueue<T>
     {
+        #region Inner Types
+        public record QueueResult(bool IsCompleted, T? Item);
+        #endregion
+
         private readonly ConcurrentQueue<T> _queue = new();
-        private readonly TaskCompletionSource _completedSource = new();
+        private bool _isCompleted = false;
         private volatile TaskCompletionSource _newItemSource = new();
 
-        public Task CompletedTask => _completedSource.Task;
-
-        public Task AwaitNewItemTask => _newItemSource.Task;
+        public bool HasData => _queue.Any();
 
         public void Enqueue(T item)
         {
@@ -27,13 +29,31 @@ namespace CsvBlobSplitterConsole
             taskCompletionSource.SetResult();
         }
 
-        public bool TryDequeue([MaybeNullWhen(false)] out T result)
-            => _queue.TryDequeue(out result);
+        public async ValueTask<QueueResult> DequeueAsync()
+        {
+            var waitTask = _newItemSource.Task;
+
+            if(_queue.TryDequeue(out var result))
+            {
+                return new QueueResult(true, result);
+            }
+            else if(_isCompleted && !_queue.Any())
+            {
+                return new QueueResult(false, default(T));
+            }
+            else
+            {
+                await waitTask;
+
+                //  Recurse to actually dequeue the value
+                return await DequeueAsync();
+            }
+        }
 
         public void Complete()
         {
-            _completedSource.SetResult();
-            _newItemSource.SetResult();
+            _isCompleted = true;
+            _newItemSource.TrySetResult();
         }
     }
 }

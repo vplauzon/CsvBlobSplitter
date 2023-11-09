@@ -11,6 +11,22 @@ namespace CsvBlobSplitterConsole.LineBased
     {
         public int Count => Length;
 
+        /// <summary>This includes the specified index and everything before.</summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public MemoryBlock SpliceBefore(int index)
+        {
+            return new MemoryBlock(Buffer, Offset, index + 1);
+        }
+
+        /// <summary>This excludes the specified index and includes everything after.</summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public MemoryBlock SpliceAfter(int index)
+        {
+            return new MemoryBlock(Buffer, Offset + index + 1, Length - index - 1);
+        }
+
         bool ICollection<byte>.IsReadOnly => true;
 
         IEnumerator<byte> IEnumerable<byte>.GetEnumerator()

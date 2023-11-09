@@ -58,14 +58,20 @@ namespace CsvBlobSplitterConsole.LineBased
 
         bool ITextSink.HasHeaders => _hasHeaders;
 
-        async Task ITextSink.ProcessAsync(WaitingQueue<TextFragment> fragmentQueue)
+        async Task ITextSink.ProcessAsync(
+            WaitingQueue<TextFragment> fragmentQueue,
+            WaitingQueue<int> releaseQueue)
         {
             var header = _hasHeaders
-                ? await DequeueHeaderAsync(fragmentQueue)
+                ? await DequeueHeaderAsync(fragmentQueue, releaseQueue)
                 : null;
             var processContext = new ProcessContext(header);
             var processTasks = Enumerable.Range(0, Environment.ProcessorCount)
-                .Select(i => ProcessFragmentsAsync(processContext, fragmentQueue, new byte[0]))
+                .Select(i => ProcessFragmentsAsync(
+                    processContext,
+                    fragmentQueue,
+                    releaseQueue,
+                    new byte[0]))
                 .ToArray();
 
             await Task.WhenAll(processTasks);
@@ -74,12 +80,14 @@ namespace CsvBlobSplitterConsole.LineBased
         private async Task ProcessFragmentsAsync(
             ProcessContext processContext,
             WaitingQueue<TextFragment> fragmentQueue,
+            WaitingQueue<int> releaseQueue,
             byte[] copyBuffer)
-        {
-            var fragment = await DequeueFragmentAsync(fragmentQueue);
+        {   //  We pre-fetch a fragment not to create an empty blob
+            var fragmentResult = await fragmentQueue.DequeueAsync();
 
-            if (fragment != null)
+            if (!fragmentResult.IsCompleted)
             {
+                var fragment = fragmentResult.Item;
                 var writeOptions = new BlobOpenWriteOptions
                 {
                     BufferSize = WRITING_BUFFER_SIZE
@@ -114,14 +122,18 @@ namespace CsvBlobSplitterConsole.LineBased
                                 0,
                                 fragment.FragmentBytes.Count());
                         }
-                        fragment.Release();
+                        releaseQueue.Enqueue(fragment.FragmentBytes.Count());
                     }
                     while (countingStream.Position < _maxBytesPerShard
-                    && (fragment = await DequeueFragmentAsync(fragmentQueue)) != null);
+                    && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);
                 }
                 Console.WriteLine($"Sealing blob {shardName}");
                 //  Recurrent call
-                await ProcessFragmentsAsync(processContext, fragmentQueue, copyBuffer);
+                await ProcessFragmentsAsync(
+                    processContext,
+                    fragmentQueue,
+                    releaseQueue,
+                    copyBuffer);
             }
         }
 
@@ -169,43 +181,23 @@ namespace CsvBlobSplitterConsole.LineBased
             }
         }
 
-        private async Task<byte[]?> DequeueHeaderAsync(WaitingQueue<TextFragment> fragmentQueue)
+        private async Task<byte[]?> DequeueHeaderAsync(
+            WaitingQueue<TextFragment> fragmentQueue,
+            WaitingQueue<int> releaseQueue)
         {
-            var fragment = await DequeueFragmentAsync(fragmentQueue);
+            var fragmentResult = await fragmentQueue.DequeueAsync();
 
-            if (fragment != null)
+            if (!fragmentResult.IsCompleted)
             {
-                var header = fragment.FragmentBytes.ToArray();
+                var header = fragmentResult.Item.FragmentBytes.ToArray();
 
-                fragment.Release();
+                releaseQueue.Enqueue(header.Length);
 
                 return header;
             }
             else
             {
                 return null;
-            }
-        }
-
-        private async Task<TextFragment?> DequeueFragmentAsync(
-            WaitingQueue<TextFragment> fragmentQueue)
-        {
-            while (true)
-            {
-                var awaitNewItemTask = fragmentQueue.AwaitNewItemTask;
-
-                if (fragmentQueue.TryDequeue(out var fragment))
-                {
-                    return fragment;
-                }
-                else if (!fragmentQueue.CompletedTask.IsCompleted)
-                {
-                    await awaitNewItemTask;
-                }
-                else
-                {
-                    return null;
-                }
             }
         }
     }

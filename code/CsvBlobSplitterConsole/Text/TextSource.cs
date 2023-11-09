@@ -13,17 +13,13 @@ namespace CsvBlobSplitterConsole.LineBased
 {
     internal class TextSource : ISource
     {
-        #region Inner Types
-        #endregion
-
 #if DEBUG
         private const int STORAGE_BUFFER_SIZE = 10 * 1024 * 1024;
 #else
         private const int STORAGE_BUFFER_SIZE = 100 * 1024 * 1024;
 #endif
         private const int MIN_STORAGE_FETCH = 1 * 1024 * 1024;
-        private const int PARSING_BUFFER_SIZE = 10 * 1024 * 1024;
-        private const int SINK_BUFFER_SIZE = 1024 * 1024;
+        private const int BUFFER_SIZE = 10 * 1024 * 1024;
 
         private readonly BlockBlobClient _sourceBlob;
         private readonly BlobCompression _compression;
@@ -45,20 +41,19 @@ namespace CsvBlobSplitterConsole.LineBased
             {
                 BufferSize = STORAGE_BUFFER_SIZE
             };
-            var buffer = new byte[PARSING_BUFFER_SIZE];
-            var bufferAvailable = PARSING_BUFFER_SIZE;
+            var buffer = new byte[BUFFER_SIZE];
+            var bufferAvailable = BUFFER_SIZE;
             var readingIndex = 0;
-            var bufferQueue = new WaitingQueue<int>();
-            var bufferReturnQueue = new WaitingQueue<int>();
-            var parsingTask = Task.Run(() => ParseBufferAsync(
-                buffer,
-                bufferQueue,
-                bufferReturnQueue));
+            var fragmentQueue = new WaitingQueue<TextFragment>();
+            var releaseQueue = new WaitingQueue<int>();
+            var sinkTask = Task.Run(() => _sink.ProcessAsync(
+                fragmentQueue,
+                releaseQueue));
 
+            Console.WriteLine($"Reading '{_sourceBlob.Uri}'");
             using (var readStream = await _sourceBlob.OpenReadAsync(readOptions))
             using (var uncompressedStream = UncompressStream(readStream))
             {
-                Console.WriteLine($"Reading '{_sourceBlob.Uri}'");
                 while (true)
                 {
                     if (bufferAvailable >= MIN_STORAGE_FETCH)
@@ -70,162 +65,35 @@ namespace CsvBlobSplitterConsole.LineBased
 
                         if (readLength == 0)
                         {
-                            bufferQueue.Complete();
-                            await parsingTask;
+                            fragmentQueue.Complete();
+                            await sinkTask;
                             return;
                         }
                         else
                         {
-                            bufferQueue.Enqueue(readLength);
+                            var block = new MemoryBlock(buffer, readingIndex, readLength);
+
+                            fragmentQueue.Enqueue(new TextFragment(block, block));
                             bufferAvailable -= readLength;
+                            readingIndex = (readingIndex + readLength) % BUFFER_SIZE;
                         }
-                        readingIndex = (readingIndex + readLength) % PARSING_BUFFER_SIZE;
                     }
                     else
                     {
-                        var newItemTask = bufferReturnQueue.AwaitNewItemTask;
-
-                        while (bufferReturnQueue.TryDequeue(out var returnLength))
+                        while (releaseQueue.HasData || bufferAvailable < MIN_STORAGE_FETCH)
                         {
-                            bufferAvailable += returnLength;
-                        }
-                        if (bufferAvailable < MIN_STORAGE_FETCH)
-                        {
-                            await newItemTask;
-                        }
-                    }
-                }
-            }
-        }
+                            var returnLengthResult = await releaseQueue.DequeueAsync();
 
-        private async Task ParseBufferAsync(
-            byte[] buffer,
-            WaitingQueue<int> bufferQueue,
-            WaitingQueue<int> bufferReturnQueue)
-        {
-            var fragmentStartIndex = 0;
-            var parsingIndex = 0;
-            var lastLineStopIndex = (int?)null;
-            var isFirstLine = true;
-            var fragmentQueue = new Queue<TextFragment>();
-            var sharedFragmentQueue = new WaitingQueue<TextFragment>();
-            var sinkTask = _sink.ProcessAsync(sharedFragmentQueue);
-
-            while (true)
-            {
-                var completedTask = bufferQueue.CompletedTask;
-                var newItemTask = bufferQueue.AwaitNewItemTask;
-
-                if (bufferQueue.TryDequeue(out var readLength))
-                {
-                    for (var i = 0; i != readLength; ++i)
-                    {
-                        if (buffer[parsingIndex] == '\n')
-                        {
-                            if (IndexDistance(fragmentStartIndex, parsingIndex) > SINK_BUFFER_SIZE
-                                || (isFirstLine && _sink.HasHeaders))
+                            if (returnLengthResult.IsCompleted)
                             {
-                                PushFragment(
-                                    buffer,
-                                    fragmentStartIndex,
-                                    parsingIndex + 1,
-                                    fragmentQueue,
-                                    sharedFragmentQueue);
-                                fragmentStartIndex = parsingIndex + 1;
-                                lastLineStopIndex = null;
-                                isFirstLine = false;
+                                throw new NotSupportedException(
+                                    "releaseQueue should never be observed as completed");
                             }
-                            else
-                            {
-                                lastLineStopIndex = parsingIndex;
-                            }
+                            bufferAvailable += returnLengthResult.Item;
                         }
-                        ++parsingIndex;
-                        parsingIndex = parsingIndex % PARSING_BUFFER_SIZE;
                     }
                 }
-                else
-                {
-                    if (lastLineStopIndex != null)
-                    {
-                        PushFragment(
-                            buffer,
-                            fragmentStartIndex,
-                            lastLineStopIndex.Value + 1,
-                            fragmentQueue,
-                            sharedFragmentQueue);
-                        fragmentStartIndex = parsingIndex + 1;
-                        lastLineStopIndex = null;
-                    }
-                    if (completedTask.IsCompleted)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        await newItemTask;
-                    }
-                }
-                ReturnBuffer(fragmentQueue, bufferReturnQueue);
             }
-            sharedFragmentQueue.Complete();
-            bufferReturnQueue.Complete();
-            await sinkTask;
-        }
-
-        private void ReturnBuffer(
-            Queue<TextFragment> fragmentQueue,
-            WaitingQueue<int> bufferReturnQueue)
-        {
-            var totalLength = 0;
-
-            while (fragmentQueue.TryPeek(out var fragment)
-                && fragment.ReleasedTask.IsCompleted)
-            {
-                fragment = fragmentQueue.Dequeue();
-                totalLength += fragment.FragmentBytes.Count();
-            }
-            if (totalLength > 0)
-            {
-                bufferReturnQueue.Enqueue(totalLength);
-            }
-        }
-
-        private void PushFragment(
-            byte[] buffer,
-            int startIndex,
-            int endIndex,
-            Queue<TextFragment> fragmentQueue,
-            WaitingQueue<TextFragment> sharedFragmentQueue)
-        {
-            var fragment = CreateFragment(buffer, startIndex, endIndex);
-
-            sharedFragmentQueue.Enqueue(fragment);
-            fragmentQueue.Enqueue(fragment);
-        }
-
-        private TextFragment CreateFragment(byte[] buffer, int startIndex, int endIndex)
-        {
-            if (startIndex < endIndex)
-            {
-                var block = new MemoryBlock(buffer, startIndex, endIndex - startIndex);
-
-                return new TextFragment(block, block);
-            }
-            else
-            {
-                var block1 = new MemoryBlock(buffer, startIndex, PARSING_BUFFER_SIZE - startIndex);
-                var block2 = new MemoryBlock(buffer, 0, endIndex);
-
-                return new TextFragment(block1.Concat(block2), null);
-            }
-        }
-
-        private int IndexDistance(int index1, int index2)
-        {
-            return index1 < index2
-                ? index2 - index1
-                : PARSING_BUFFER_SIZE + index2 - index1;
         }
 
         private Stream UncompressStream(Stream readStream)

@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace CsvBlobSplitterConsole.LineBased
 {
-    internal class LineBasedFragment
+    internal class TextFragment
     {
         private readonly TaskCompletionSource _releaseSource = new();
 
-        public LineBasedFragment(
+        public TextFragment(
             IEnumerable<byte> fragmentBytes,
             MemoryBlock? fragmentBlock)
         {

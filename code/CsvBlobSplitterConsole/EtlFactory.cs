@@ -25,13 +25,13 @@ namespace CsvBlobSplitterConsole
             {
                 case Format.LineBased:
                     {
-                        var sink = new LineBasedBlobSink(
+                        var sink = new TextBlobSink(
                             destinationBlobContainer,
                             destinationBlobPrefix,
                             runSettings.OutputCompression,
                             runSettings.MaxMbPerShard,
                             runSettings.HasHeaders);
-                        var source = new LineBasedSource(
+                        var source = new TextSource(
                             sourceBlobClient,
                             runSettings.InputCompression,
                             sink);

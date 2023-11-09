@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace CsvBlobSplitterConsole.LineBased
 {
-    internal class LineBasedBlobSink : ILineBasedSink
+    internal class TextBlobSink : ITextSink
     {
         #region Inner Types
         private class ProcessContext
@@ -42,7 +42,7 @@ namespace CsvBlobSplitterConsole.LineBased
         private readonly long _maxBytesPerShard;
         private readonly bool _hasHeaders;
 
-        public LineBasedBlobSink(
+        public TextBlobSink(
             BlobContainerClient destinationBlobContainer,
             string destinationBlobPrefix,
             BlobCompression compression,
@@ -56,9 +56,9 @@ namespace CsvBlobSplitterConsole.LineBased
             _hasHeaders = hasHeaders;
         }
 
-        bool ILineBasedSink.HasHeaders => _hasHeaders;
+        bool ITextSink.HasHeaders => _hasHeaders;
 
-        async Task ILineBasedSink.ProcessAsync(WaitingQueue<LineBasedFragment> fragmentQueue)
+        async Task ITextSink.ProcessAsync(WaitingQueue<TextFragment> fragmentQueue)
         {
             var header = _hasHeaders
                 ? await DequeueHeaderAsync(fragmentQueue)
@@ -73,7 +73,7 @@ namespace CsvBlobSplitterConsole.LineBased
 
         private async Task ProcessFragmentsAsync(
             ProcessContext processContext,
-            WaitingQueue<LineBasedFragment> fragmentQueue,
+            WaitingQueue<TextFragment> fragmentQueue,
             byte[] copyBuffer)
         {
             var fragment = await DequeueFragmentAsync(fragmentQueue);
@@ -169,7 +169,7 @@ namespace CsvBlobSplitterConsole.LineBased
             }
         }
 
-        private async Task<byte[]?> DequeueHeaderAsync(WaitingQueue<LineBasedFragment> fragmentQueue)
+        private async Task<byte[]?> DequeueHeaderAsync(WaitingQueue<TextFragment> fragmentQueue)
         {
             var fragment = await DequeueFragmentAsync(fragmentQueue);
 
@@ -187,8 +187,8 @@ namespace CsvBlobSplitterConsole.LineBased
             }
         }
 
-        private async Task<LineBasedFragment?> DequeueFragmentAsync(
-            WaitingQueue<LineBasedFragment> fragmentQueue)
+        private async Task<TextFragment?> DequeueFragmentAsync(
+            WaitingQueue<TextFragment> fragmentQueue)
         {
             while (true)
             {

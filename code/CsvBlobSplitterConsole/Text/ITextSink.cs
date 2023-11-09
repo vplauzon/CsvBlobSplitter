@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace CsvBlobSplitterConsole.LineBased
 {
-    internal interface ILineBasedSink
+    internal interface ITextSink
     {
         bool HasHeaders { get; }
 
-        Task ProcessAsync(WaitingQueue<LineBasedFragment> fragmentQueue);
+        Task ProcessAsync(WaitingQueue<TextFragment> fragmentQueue);
     }
 }

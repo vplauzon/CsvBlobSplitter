@@ -8,7 +8,7 @@ namespace CsvBlobSplitterConsole
 {
     internal enum Format
     {
-        LineBased,
+        Text,
         Csv
     }
 }

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CsvBlobSplitterConsole.LineBased
 {
-    internal class LineBasedSource : ISource
+    internal class TextSource : ISource
     {
         #region Inner Types
         #endregion
@@ -27,12 +27,12 @@ namespace CsvBlobSplitterConsole.LineBased
 
         private readonly BlockBlobClient _sourceBlob;
         private readonly BlobCompression _compression;
-        private readonly ILineBasedSink _sink;
+        private readonly ITextSink _sink;
 
-        public LineBasedSource(
+        public TextSource(
             BlockBlobClient sourceBlob,
             BlobCompression compression,
-            ILineBasedSink sink)
+            ITextSink sink)
         {
             _sourceBlob = sourceBlob;
             _compression = compression;
@@ -107,8 +107,8 @@ namespace CsvBlobSplitterConsole.LineBased
             var parsingIndex = 0;
             var lastLineStopIndex = (int?)null;
             var isFirstLine = true;
-            var fragmentQueue = new Queue<LineBasedFragment>();
-            var sharedFragmentQueue = new WaitingQueue<LineBasedFragment>();
+            var fragmentQueue = new Queue<TextFragment>();
+            var sharedFragmentQueue = new WaitingQueue<TextFragment>();
             var sinkTask = _sink.ProcessAsync(sharedFragmentQueue);
 
             while (true)
@@ -174,7 +174,7 @@ namespace CsvBlobSplitterConsole.LineBased
         }
 
         private void ReturnBuffer(
-            Queue<LineBasedFragment> fragmentQueue,
+            Queue<TextFragment> fragmentQueue,
             WaitingQueue<int> bufferReturnQueue)
         {
             var totalLength = 0;
@@ -195,8 +195,8 @@ namespace CsvBlobSplitterConsole.LineBased
             byte[] buffer,
             int startIndex,
             int endIndex,
-            Queue<LineBasedFragment> fragmentQueue,
-            WaitingQueue<LineBasedFragment> sharedFragmentQueue)
+            Queue<TextFragment> fragmentQueue,
+            WaitingQueue<TextFragment> sharedFragmentQueue)
         {
             var fragment = CreateFragment(buffer, startIndex, endIndex);
 
@@ -204,20 +204,20 @@ namespace CsvBlobSplitterConsole.LineBased
             fragmentQueue.Enqueue(fragment);
         }
 
-        private LineBasedFragment CreateFragment(byte[] buffer, int startIndex, int endIndex)
+        private TextFragment CreateFragment(byte[] buffer, int startIndex, int endIndex)
         {
             if (startIndex < endIndex)
             {
                 var block = new MemoryBlock(buffer, startIndex, endIndex - startIndex);
 
-                return new LineBasedFragment(block, block);
+                return new TextFragment(block, block);
             }
             else
             {
                 var block1 = new MemoryBlock(buffer, startIndex, PARSING_BUFFER_SIZE - startIndex);
                 var block2 = new MemoryBlock(buffer, 0, endIndex);
 
-                return new LineBasedFragment(block1.Concat(block2), null);
+                return new TextFragment(block1.Concat(block2), null);
             }
         }
 

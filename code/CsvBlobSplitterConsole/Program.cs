@@ -1,11 +1,15 @@
-﻿namespace CsvBlobSplitterConsole
+﻿using System.Diagnostics;
+
+namespace CsvBlobSplitterConsole
 {
     internal class Program
     {
         private static async Task Main(string[] args)
         {
+            var stopwatch = new Stopwatch();
             var runSettings = RunSettings.FromEnvironmentVariables();
 
+            stopwatch.Start();
             Console.WriteLine();
             Console.WriteLine($"Format:  {runSettings.Format}");
             Console.WriteLine($"SourceBlob:  {runSettings.SourceBlob}");
@@ -20,6 +24,7 @@
             var etl = EtlFactory.Create(runSettings);
 
             await etl.ProcessAsync();
+            Console.WriteLine($"ETL completed in {stopwatch.Elapsed}");
         }
     }
 }

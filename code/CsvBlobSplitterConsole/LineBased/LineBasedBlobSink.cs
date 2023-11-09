@@ -190,7 +190,7 @@ namespace CsvBlobSplitterConsole.LineBased
         private async Task<LineBasedFragment?> DequeueFragmentAsync(
             WaitingQueue<LineBasedFragment> fragmentQueue)
         {
-            while (!fragmentQueue.CompletedTask.IsCompleted)
+            while (true)
             {
                 var awaitNewItemTask = fragmentQueue.AwaitNewItemTask;
 
@@ -200,11 +200,9 @@ namespace CsvBlobSplitterConsole.LineBased
                 }
                 else
                 {
-                    await Task.WhenAny(awaitNewItemTask, fragmentQueue.CompletedTask); ;
+                    await awaitNewItemTask;
                 }
             }
-
-            return null;
         }
     }
 }

@@ -34,7 +34,6 @@ namespace CsvBlobSplitterConsole.LineBased
         #endregion
 
         private const int WRITING_BUFFER_SIZE = 200 * 1024 * 1024;
-        private const int PARALLEL_BLOB_COUNT = 2;
 
         private readonly BlobContainerClient _destinationBlobContainer;
         private readonly string _destinationBlobPrefix;
@@ -66,7 +65,7 @@ namespace CsvBlobSplitterConsole.LineBased
                 ? await DequeueHeaderAsync(fragmentQueue, releaseQueue)
                 : null;
             var processContext = new ProcessContext(header);
-            var processTasks = Enumerable.Range(0, Environment.ProcessorCount)
+            var processTasks = Enumerable.Range(0, Environment.ProcessorCount + 1)
                 .Select(i => ProcessFragmentsAsync(
                     processContext,
                     fragmentQueue,

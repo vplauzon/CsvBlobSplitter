@@ -15,10 +15,11 @@ namespace CsvBlobSplitterConsole.LineBased
     {
 #if DEBUG
         private const int STORAGE_BUFFER_SIZE = 10 * 1024 * 1024;
+        private const int MIN_STORAGE_FETCH = 1 * 1024 * 1024;
 #else
         private const int STORAGE_BUFFER_SIZE = 100 * 1024 * 1024;
+        private const int MIN_STORAGE_FETCH = 10 * 1024 * 1024;
 #endif
-        private const int MIN_STORAGE_FETCH = 1 * 1024 * 1024;
         private const int BUFFER_SIZE = 10 * 1024 * 1024;
 
         private readonly BlockBlobClient _sourceBlob;

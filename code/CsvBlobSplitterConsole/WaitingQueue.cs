@@ -33,6 +33,7 @@ namespace CsvBlobSplitterConsole
         public void Complete()
         {
             _completedSource.SetResult();
+            _newItemSource.SetResult();
         }
     }
 }

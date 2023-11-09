@@ -165,6 +165,7 @@ namespace CsvBlobSplitterConsole.LineBased
                 }
                 ReturnBuffer(fragmentQueue, bufferReturnQueue);
             }
+            sharedFragmentQueue.Complete();
             bufferReturnQueue.Complete();
             await sinkTask;
         }

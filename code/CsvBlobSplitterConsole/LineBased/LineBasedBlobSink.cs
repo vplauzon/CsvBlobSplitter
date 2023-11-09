@@ -58,8 +58,8 @@ namespace CsvBlobSplitterConsole.LineBased
         async Task ILineBasedSink.ProcessAsync(WaitingQueue<LineBasedFragment> fragmentQueue)
         {
             var header = _hasHeaders
-                ? null
-                : await DequeueHeaderAsync(fragmentQueue);
+                ? await DequeueHeaderAsync(fragmentQueue)
+                : null;
             var processContext = new ProcessContext(header);
 
             await ProcessFragmentsAsync(processContext, fragmentQueue);
@@ -69,7 +69,7 @@ namespace CsvBlobSplitterConsole.LineBased
             ProcessContext processContext,
             WaitingQueue<LineBasedFragment> fragmentQueue)
         {
-            var fragment = DequeueFragmentAsync(fragmentQueue);
+            var fragment = await DequeueFragmentAsync(fragmentQueue);
 
             if (fragment != null)
             {
@@ -80,6 +80,7 @@ namespace CsvBlobSplitterConsole.LineBased
                 var counter = processContext.GetNewCounterValue();
                 var shardName = $"{_destinationBlobPrefix}-{counter}.csv.gz";
                 var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
+                var copyBuffer = new byte[0];
 
                 using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
                 using (var compressedStream = CompressedStream(blobStream))
@@ -91,14 +92,45 @@ namespace CsvBlobSplitterConsole.LineBased
                     }
                     do
                     {
-                        await countingStream.WriteAsync(processContext.Header);
+                        if (fragment.FragmentBlock != null)
+                        {
+                            await countingStream.WriteAsync(
+                                fragment.FragmentBlock.Buffer,
+                                fragment.FragmentBlock.Offset,
+                                fragment.FragmentBlock.Count);
+                        }
+                        else
+                        {
+                            copyBuffer = CopyBytes(copyBuffer, fragment.FragmentBytes);
+                            await countingStream.WriteAsync(
+                                copyBuffer,
+                                0,
+                                fragment.FragmentBytes.Count());
+                        }
+                        fragment.Release();
                     }
                     while (countingStream.Position < _maxBytesPerShard
-                    && (fragment = DequeueFragmentAsync(fragmentQueue)) != null);
+                    && (fragment = await DequeueFragmentAsync(fragmentQueue)) != null);
                 }
                 //  Recurrent call
                 await ProcessFragmentsAsync(processContext, fragmentQueue);
             }
+        }
+
+        private byte[] CopyBytes(byte[] copyBuffer, IEnumerable<byte> fragmentBytes)
+        {
+            var i = 0;
+
+            if (copyBuffer.Length < fragmentBytes.Count())
+            {
+                copyBuffer = new byte[fragmentBytes.Count()];
+            }
+            foreach(var b in fragmentBytes)
+            {
+                copyBuffer[i++] = b;
+            }
+
+            return copyBuffer;
         }
 
         private Stream CompressedStream(Stream stream)
@@ -121,7 +153,11 @@ namespace CsvBlobSplitterConsole.LineBased
 
             if (fragment != null)
             {
-                return fragment.FragmentBytes.ToArray();
+                var header = fragment.FragmentBytes.ToArray();
+
+                fragment.Release();
+
+                return header;
             }
             else
             {

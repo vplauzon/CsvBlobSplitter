@@ -14,6 +14,13 @@ namespace CsvBlobSplitterConsole.LineBased
             IEnumerable<byte> fragmentBytes,
             MemoryBlock? fragmentBlock)
         {
+            if (fragmentBlock != null)
+            {
+                if (fragmentBlock.Offset + fragmentBlock.Count > fragmentBlock.Buffer.Length)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(fragmentBlock));
+                }
+            }
             FragmentBytes = fragmentBytes;
             FragmentBlock = fragmentBlock;
         }

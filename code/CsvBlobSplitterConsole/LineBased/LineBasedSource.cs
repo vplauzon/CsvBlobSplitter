@@ -85,6 +85,7 @@ namespace CsvBlobSplitterConsole.LineBased
                             bufferQueue.Enqueue(readLength);
                         }
                         readingIndex += readLength;
+                        readingIndex = readingIndex % PARSING_BUFFER_SIZE;
                     }
                     else
                     {
@@ -202,13 +203,13 @@ namespace CsvBlobSplitterConsole.LineBased
         {
             if (startIndex < endIndex)
             {
-                var block = new MemoryBlock(buffer, startIndex, endIndex);
+                var block = new MemoryBlock(buffer, startIndex, endIndex - startIndex);
 
                 return new LineBasedFragment(block, block);
             }
             else
             {
-                var block1 = new MemoryBlock(buffer, startIndex, PARSING_BUFFER_SIZE);
+                var block1 = new MemoryBlock(buffer, startIndex, PARSING_BUFFER_SIZE - startIndex);
                 var block2 = new MemoryBlock(buffer, 0, endIndex);
 
                 return new LineBasedFragment(block1.Concat(block2), null);

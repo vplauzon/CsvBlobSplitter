@@ -81,9 +81,12 @@ namespace CsvBlobSplitterConsole.LineBased
             WaitingQueue<TextFragment> fragmentQueue,
             WaitingQueue<int> releaseQueue,
             byte[] copyBuffer)
-        {   //  We pre-fetch a fragment not to create an empty blob
+        {
+            var stopwatch = new Stopwatch();
+            //  We pre-fetch a fragment not to create an empty blob
             var fragmentResult = await fragmentQueue.DequeueAsync();
 
+            stopwatch.Start();
             if (!fragmentResult.IsCompleted)
             {
                 var fragment = fragmentResult.Item!;
@@ -126,7 +129,7 @@ namespace CsvBlobSplitterConsole.LineBased
                     while (countingStream.Position < _maxBytesPerShard
                     && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);
                 }
-                Console.WriteLine($"Sealing blob {shardName}");
+                Console.WriteLine($"Sealing blob {shardName} ({stopwatch.Elapsed})");
                 //  Recurrent call
                 await ProcessFragmentsAsync(
                     processContext,

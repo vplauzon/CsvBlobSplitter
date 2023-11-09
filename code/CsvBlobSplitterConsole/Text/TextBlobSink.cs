@@ -65,7 +65,8 @@ namespace CsvBlobSplitterConsole.LineBased
                 ? await DequeueHeaderAsync(fragmentQueue, releaseQueue)
                 : null;
             var processContext = new ProcessContext(header);
-            var processTasks = Enumerable.Range(0, 3 * Environment.ProcessorCount)
+            var parallelism = (int)Math.Ceiling(1.5 * Environment.ProcessorCount);
+            var processTasks = Enumerable.Range(0, parallelism)
                 .Select(i => ProcessFragmentsAsync(
                     processContext,
                     fragmentQueue,
@@ -85,7 +86,7 @@ namespace CsvBlobSplitterConsole.LineBased
             var stopwatch = new Stopwatch();
 
             stopwatch.Start();
-            
+
             //  We pre-fetch a fragment not to create an empty blob
             var fragmentResult = await fragmentQueue.DequeueAsync();
 

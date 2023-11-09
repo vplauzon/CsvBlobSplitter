@@ -16,7 +16,7 @@ namespace CsvBlobSplitterConsole
             Console.WriteLine($"DestinationBlobPrefix:  {runSettings.DestinationBlobPrefix}");
             Console.WriteLine($"Compression:  {runSettings.InputCompression}");
             Console.WriteLine($"Compression:  {runSettings.OutputCompression}");
-            Console.WriteLine($"HasCsvHeaders:  {runSettings.HasHeaders}");
+            Console.WriteLine($"HasHeaders:  {runSettings.HasHeaders}");
             Console.WriteLine($"MaxRowsPerShard:  {runSettings.MaxRowsPerShard}");
             Console.WriteLine($"MaxMbPerShard:  {runSettings.MaxMbPerShard}");
             Console.WriteLine();

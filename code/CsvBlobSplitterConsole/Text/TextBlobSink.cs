@@ -65,7 +65,7 @@ namespace CsvBlobSplitterConsole.LineBased
                 ? await DequeueHeaderAsync(fragmentQueue, releaseQueue)
                 : null;
             var processContext = new ProcessContext(header);
-            var processTasks = Enumerable.Range(0, 4 * Environment.ProcessorCount)
+            var processTasks = Enumerable.Range(0, 3 * Environment.ProcessorCount)
                 .Select(i => ProcessFragmentsAsync(
                     processContext,
                     fragmentQueue,

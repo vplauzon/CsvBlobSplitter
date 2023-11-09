@@ -35,11 +35,11 @@ namespace CsvBlobSplitterConsole
 
             if(_queue.TryDequeue(out var result))
             {
-                return new QueueResult(true, result);
+                return new QueueResult(false, result);
             }
             else if(_isCompleted && !_queue.Any())
             {
-                return new QueueResult(false, default(T));
+                return new QueueResult(true, default(T));
             }
             else
             {

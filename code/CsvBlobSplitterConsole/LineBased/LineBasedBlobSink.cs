@@ -2,6 +2,8 @@
 using Azure.Storage.Blobs.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection.PortableExecutable;
@@ -32,6 +34,7 @@ namespace CsvBlobSplitterConsole.LineBased
         #endregion
 
         private const int WRITING_BUFFER_SIZE = 200 * 1024 * 1024;
+        private const int PARALLEL_BLOB_COUNT = 2;
 
         private readonly BlobContainerClient _destinationBlobContainer;
         private readonly string _destinationBlobPrefix;
@@ -61,13 +64,17 @@ namespace CsvBlobSplitterConsole.LineBased
                 ? await DequeueHeaderAsync(fragmentQueue)
                 : null;
             var processContext = new ProcessContext(header);
+            var processTasks = Enumerable.Range(0, PARALLEL_BLOB_COUNT)
+                .Select(i => ProcessFragmentsAsync(processContext, fragmentQueue, new byte[0]))
+                .ToArray();
 
-            await ProcessFragmentsAsync(processContext, fragmentQueue);
+            await Task.WhenAll(processTasks);
         }
 
         private async Task ProcessFragmentsAsync(
             ProcessContext processContext,
-            WaitingQueue<LineBasedFragment> fragmentQueue)
+            WaitingQueue<LineBasedFragment> fragmentQueue,
+            byte[] copyBuffer)
         {
             var fragment = await DequeueFragmentAsync(fragmentQueue);
 
@@ -78,9 +85,9 @@ namespace CsvBlobSplitterConsole.LineBased
                     BufferSize = WRITING_BUFFER_SIZE
                 };
                 var counter = processContext.GetNewCounterValue();
-                var shardName = $"{_destinationBlobPrefix}-{counter}.csv.gz";
+                var shardName =
+                    $"{_destinationBlobPrefix}-{counter}.csv{GetCompressionExtension()}";
                 var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
-                var copyBuffer = new byte[0];
 
                 using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
                 using (var compressedStream = CompressedStream(blobStream))
@@ -112,8 +119,23 @@ namespace CsvBlobSplitterConsole.LineBased
                     while (countingStream.Position < _maxBytesPerShard
                     && (fragment = await DequeueFragmentAsync(fragmentQueue)) != null);
                 }
+                Console.WriteLine($"Sealing blob {shardName}");
                 //  Recurrent call
-                await ProcessFragmentsAsync(processContext, fragmentQueue);
+                await ProcessFragmentsAsync(processContext, fragmentQueue, copyBuffer);
+            }
+        }
+
+        private string GetCompressionExtension()
+        {
+            switch (_compression)
+            {
+                case BlobCompression.None:
+                    return string.Empty;
+                case BlobCompression.Gzip:
+                    return ".gz";
+
+                default:
+                    throw new NotSupportedException(_compression.ToString());
             }
         }
 
@@ -125,7 +147,7 @@ namespace CsvBlobSplitterConsole.LineBased
             {
                 copyBuffer = new byte[fragmentBytes.Count()];
             }
-            foreach(var b in fragmentBytes)
+            foreach (var b in fragmentBytes)
             {
                 copyBuffer[i++] = b;
             }

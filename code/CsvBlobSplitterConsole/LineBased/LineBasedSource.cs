@@ -63,6 +63,7 @@ namespace CsvBlobSplitterConsole.LineBased
             using (var readStream = await _sourceBlob.OpenReadAsync(readOptions))
             using (var uncompressedStream = UncompressStream(readStream))
             {
+                Console.WriteLine($"Reading '{_sourceBlob.Uri}'");
                 while (true)
                 {
                     var maxReadSize = IndexDistance(readingIndex, sinkIndex);

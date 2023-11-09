@@ -61,7 +61,9 @@ namespace CsvBlobSplitterConsole.LineBased
                         var readLength = await uncompressedStream.ReadAsync(
                             buffer,
                             readingIndex,
-                            bufferAvailable);
+                            Math.Min(
+                                bufferAvailable,
+                                BUFFER_SIZE - readingIndex));
 
                         if (readLength == 0)
                         {

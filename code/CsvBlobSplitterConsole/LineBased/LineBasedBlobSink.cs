@@ -198,9 +198,13 @@ namespace CsvBlobSplitterConsole.LineBased
                 {
                     return fragment;
                 }
-                else
+                else if (!fragmentQueue.CompletedTask.IsCompleted)
                 {
                     await awaitNewItemTask;
+                }
+                else
+                {
+                    return null;
                 }
             }
         }

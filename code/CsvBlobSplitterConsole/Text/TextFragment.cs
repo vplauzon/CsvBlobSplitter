@@ -8,8 +8,6 @@ namespace CsvBlobSplitterConsole.LineBased
 {
     internal class TextFragment
     {
-        private readonly TaskCompletionSource _releaseSource = new();
-
         public TextFragment(
             IEnumerable<byte> fragmentBytes,
             MemoryBlock? fragmentBlock)

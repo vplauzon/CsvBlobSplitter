@@ -15,35 +15,36 @@ namespace CsvBlobSplitterConsole
         #endregion
 
         private readonly ConcurrentQueue<T> _queue = new();
-        private bool _isCompleted = false;
+        private readonly TaskCompletionSource _isCompletedSource = new();
         private volatile TaskCompletionSource _newItemSource = new();
 
         public bool HasData => _queue.Any();
 
         public void Enqueue(T item)
         {
-            var taskCompletionSource = _newItemSource;
+            var oldSource = Interlocked.Exchange(
+                ref _newItemSource,
+                new());
 
             _queue.Enqueue(item);
-            Interlocked.Exchange(ref _newItemSource, new());
-            taskCompletionSource.SetResult();
+            oldSource.SetResult();
         }
 
         public async ValueTask<QueueResult> DequeueAsync()
         {
-            var waitTask = _newItemSource.Task;
+            var newItemTask = _newItemSource.Task;
 
-            if(_queue.TryDequeue(out var result))
+            if (_queue.TryDequeue(out var result))
             {
                 return new QueueResult(false, result);
             }
-            else if(_isCompleted && !_queue.Any())
+            else if (_isCompletedSource.Task.IsCompleted && !_queue.Any())
             {
                 return new QueueResult(true, default(T));
             }
             else
             {
-                await waitTask;
+                await Task.WhenAny(newItemTask, _isCompletedSource.Task);
 
                 //  Recurse to actually dequeue the value
                 return await DequeueAsync();
@@ -52,8 +53,7 @@ namespace CsvBlobSplitterConsole
 
         public void Complete()
         {
-            _isCompleted = true;
-            _newItemSource.TrySetResult();
+            _isCompletedSource.SetResult();
         }
     }
 }

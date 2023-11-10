@@ -11,4 +11,4 @@ COPY . .
 ENV TODO ""
 
 #	Run console app
-CMD ["dotnet", "eh-max-ingest.dll"]
+CMD ["dotnet", "CsvBlobSplitterConsole.dll"]

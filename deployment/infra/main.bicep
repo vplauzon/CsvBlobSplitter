@@ -54,7 +54,7 @@ resource userIdentityRbacAuthorization 'Microsoft.Authorization/roleAssignments@
 }
 
 resource appEnvironment 'Microsoft.App/managedEnvironments@2022-10-01' = {
-  name: '$app-env-${suffix}'
+  name: 'app-env-${suffix}'
   location: location
   sku: {
     name: 'Consumption'

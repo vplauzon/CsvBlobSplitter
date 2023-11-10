@@ -83,15 +83,7 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
       ingress: {
         allowInsecure: false
         exposedPort: 0
-        external: true
-        targetPort: 80
         transport: 'auto'
-        traffic: [
-          {
-            latestRevision: true
-            weight: 100
-          }
-        ]
       }
       registries: [
         {
@@ -106,7 +98,7 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
       containers: [
         {
           image: '${registry.name}.azurecr.io/kusto/kusto-split:latest'
-          name: 'main-workbench'
+          name: 'worker'
           resources: {
             cpu: '0.25'
             memory: '0.5Gi'

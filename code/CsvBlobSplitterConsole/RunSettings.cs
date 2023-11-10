@@ -62,7 +62,7 @@ namespace CsvBlobSplitterConsole
                 throw new NotSupportedException("No destination specified");
             }
 
-            Format = format?? Format.Csv;
+            Format = format?? Format.Text;
             SourceBlob = sourceBlob;
             DestinationBlobPrefix = destinationBlobPrefix;
             InputCompression = inputCompression ?? BlobCompression.None;

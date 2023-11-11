@@ -22,11 +22,11 @@ jobs:
     - name: Install dependencies
       run: dotnet restore code
     - name: .NET Build Console
-      run: dotnet build code/CsvBlobSplitterConsole --configuration Release --no-restore
+      run: dotnet build code/KustoBlobSplitServer --configuration Release --no-restore
     - name: Copy binaries
       run: |
         mkdir bin
-        cp -r code/CsvBlobSplitterConsole/bin/Release/net*/* bin
+        cp -r code/KustoBlobSplitServer/bin/Release/net*/* bin
 
     - name: Azure Login
       run: az login --service-principal -u ${{ secrets.DEPLOY_CLIENT_ID }} -p ${{ secrets.DEPLOY_SECRET }} --tenant ${{ secrets.TENANT_ID }}

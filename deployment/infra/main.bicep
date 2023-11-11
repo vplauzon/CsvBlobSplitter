@@ -154,7 +154,7 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
           image: '${registry.name}.azurecr.io/kusto/kusto-split:latest'
           name: 'worker'
           resources: {
-            cpu: '2'
+            cpu: '1'
             memory: '2Gi'
           }
           env: [

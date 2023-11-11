@@ -4,6 +4,36 @@ param location string = resourceGroup().location
 var prefix = 'ks'
 var suffix = uniqueString(resourceGroup().id)
 
+resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+  name: '${prefix}storage${suffix}'
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    isHnsEnabled: true
+  }
+
+  resource blobServices 'blobServices' = {
+    name: 'default'
+
+    resource devContainer 'containers' = {
+      name: 'dev'
+      properties: {
+        publicAccess: 'None'
+      }
+    }
+
+    resource testContainer 'containers' = {
+      name: 'test'
+      properties: {
+        publicAccess: 'None'
+      }
+    }
+  }
+}
+
 resource registry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   name: '${prefix}registry${suffix}'
   location: location

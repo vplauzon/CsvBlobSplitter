@@ -48,7 +48,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
 
 //  Authorize principal to read / write storage (Storage Blob Data Contributor)
 resource appStorageRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerFetchingIdentity.id, registry.id, 'rbac')
+  name: guid(appIdentity.id, registry.id, 'rbac')
   scope: registry
 
   properties: {

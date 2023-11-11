@@ -157,8 +157,8 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
           //  [cpu: 0.25, memory: 0.5Gi]; [cpu: 0.5, memory: 1.0Gi]; [cpu: 0.75, memory: 1.5Gi]; [cpu: 1.0, memory: 2.0Gi]; [cpu: 1.25, memory: 2.5Gi];
           //  [cpu: 1.5, memory: 3.0Gi]; [cpu: 1.75, memory: 3.5Gi]; [cpu: 2.0, memory: 4.0Gi]
           resources: {
-            cpu: '1'
-            memory: '2Gi'
+            cpu: '2'
+            memory: '4Gi'
           }
           env: [
             {

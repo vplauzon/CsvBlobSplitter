@@ -163,7 +163,7 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
               value: 'ManagedIdentity'
             }
             {
-              name: 'AuthMode'
+              name: 'ManagedIdentityResourceId'
               value: appIdentity.id
             }
             {

@@ -4,6 +4,18 @@ param location string = resourceGroup().location
 var prefix = 'ks'
 var suffix = uniqueString(resourceGroup().id)
 
+//  Identity fetching the container images from the registry
+resource containerFetchingIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${prefix}-containerFetchingId-${suffix}'
+  location: location
+}
+
+//  Identity orchestrating, i.e. accessing Kusto + Storage
+resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${prefix}-app-id-${suffix}'
+  location: location
+}
+
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: '${prefix}storage${suffix}'
   location: location
@@ -34,6 +46,19 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 
+//  Authorize principal to read / write storage (Storage Blob Data Contributor)
+resource appStorageRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerFetchingIdentity.id, registry.id, 'rbac')
+  scope: registry
+
+  properties: {
+    description: 'Giving data contributor'
+    principalId: appIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+  }
+}
+
 resource registry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   name: '${prefix}registry${suffix}'
   location: location
@@ -60,19 +85,8 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = 
   }
 }
 
-resource containerFetchingIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${prefix}-containerFetchingId-${suffix}'
-  location: location
-}
-
-//  Identity orchestrating, i.e. accessing Kusto + Storage
-resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${prefix}-app-id-${suffix}'
-  location: location
-}
-
-//  We also need to authorize the user identity to pull container images from the registry
-resource userIdentityRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+//  Authorize principal to pull container images from the registry
+resource containerFetchingRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(containerFetchingIdentity.id, registry.id, 'rbac')
   scope: registry
 

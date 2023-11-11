@@ -1,4 +1,4 @@
-﻿using CsvBlobSplitterConsole.LineBased;
+﻿using KustoBlobSplitLib.LineBased;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static Kusto.Cloud.Platform.Utils.CachedBufferEncoder;
 
-namespace CsvBlobSplitterConsole.Text
+namespace KustoBlobSplitLib.Text
 {
     internal class TextLineParsingSink : ITextSink
     {

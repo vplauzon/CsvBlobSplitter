@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
+using KustoBlobSplitLib;
 
-namespace CsvBlobSplitterConsole
+namespace KustoBlobSplitConsole
 {
     internal class Program
     {

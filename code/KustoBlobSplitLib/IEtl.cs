@@ -1,4 +1,4 @@
-﻿namespace CsvBlobSplitterConsole
+﻿namespace KustoBlobSplitLib
 {
     public interface IEtl
     {

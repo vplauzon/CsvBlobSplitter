@@ -10,7 +10,7 @@ using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CsvBlobSplitterConsole.LineBased
+namespace KustoBlobSplitLib.LineBased
 {
     internal class TextBlobSink : ITextSink
     {

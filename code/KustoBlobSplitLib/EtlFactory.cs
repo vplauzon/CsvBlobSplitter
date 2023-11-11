@@ -1,12 +1,12 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs.Specialized;
-using CsvBlobSplitterConsole.LineBased;
-using CsvBlobSplitterConsole.Text;
+using KustoBlobSplitLib.LineBased;
+using KustoBlobSplitLib.Text;
 
-namespace CsvBlobSplitterConsole
+namespace KustoBlobSplitLib
 {
-    internal class EtlFactory
+    public class EtlFactory
     {
         public static IEtl Create(RunSettings runSettings)
         {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CsvBlobSplitterConsole.LineBased
+namespace KustoBlobSplitLib.LineBased
 {
     internal record MemoryBlock(byte[] Buffer, int Offset, int Length) : ICollection<byte>
     {

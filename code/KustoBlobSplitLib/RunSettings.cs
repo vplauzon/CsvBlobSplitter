@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CsvBlobSplitterConsole
+namespace KustoBlobSplitLib
 {
-    internal class RunSettings
+    public class RunSettings
     {
         public AuthMode AuthMode { get; }
 

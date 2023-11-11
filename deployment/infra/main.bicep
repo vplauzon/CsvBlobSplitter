@@ -5,7 +5,7 @@ var prefix = 'ks'
 var suffix = uniqueString(resourceGroup().id)
 
 resource registry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
-  name: '${prefix}-registry-${suffix}'
+  name: '${prefix}registry${suffix}'
   location: location
   sku: {
     name: 'Basic'

@@ -159,6 +159,10 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
           }
           env: [
             {
+              name: 'AuthMode'
+              value: 'ManagedIdentity'
+            }
+            {
               name: 'SourceBlob'
               value: 'https://${storage.name}.blob.core.windows.net/dev/adx.gz'
             }

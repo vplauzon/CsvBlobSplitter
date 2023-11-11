@@ -8,6 +8,10 @@ namespace CsvBlobSplitterConsole
 {
     internal class RunSettings
     {
+        public AuthMode AuthMode { get; }
+
+        public string? ManagedIdentityResourceId { get; }
+
         public Format Format { get; }
 
         public Uri SourceBlob { get; }
@@ -15,7 +19,7 @@ namespace CsvBlobSplitterConsole
         public Uri? DestinationBlobPrefix { get; }
 
         public BlobCompression InputCompression { get; }
-        
+
         public BlobCompression OutputCompression { get; }
 
         public bool HasHeaders { get; }
@@ -25,6 +29,8 @@ namespace CsvBlobSplitterConsole
         #region Constructors
         public static RunSettings FromEnvironmentVariables()
         {
+            var authMode = GetEnum<AuthMode>("AuthMode", false);
+            var managedIdentityResourceId = GetString("ManagedIdentityResourceId", false);
             var format = GetEnum<Format>("Format", false);
             var sourceBlob = GetUri("SourceBlob");
             var destinationBlobPrefix = GetUri("DestinationBlobPrefix", false);
@@ -34,6 +40,8 @@ namespace CsvBlobSplitterConsole
             var maxMbPerShard = GetInt("MaxMbPerShard", false);
 
             return new RunSettings(
+                authMode,
+                managedIdentityResourceId,
                 format,
                 sourceBlob,
                 destinationBlobPrefix,
@@ -44,6 +52,8 @@ namespace CsvBlobSplitterConsole
         }
 
         public RunSettings(
+            AuthMode? authMode,
+            string? managedIdentityResourceId,
             Format? format,
             Uri sourceBlob,
             Uri? destinationBlobPrefix,
@@ -56,8 +66,15 @@ namespace CsvBlobSplitterConsole
             {
                 throw new NotSupportedException("No destination specified");
             }
+            if (AuthMode == AuthMode.ManagedIdentity
+                && string.IsNullOrWhiteSpace(managedIdentityResourceId))
+            {
+                throw new ArgumentNullException(nameof(managedIdentityResourceId));
+            }
 
-            Format = format?? Format.Text;
+            AuthMode = authMode ?? AuthMode.Default;
+            ManagedIdentityResourceId = managedIdentityResourceId;
+            Format = format ?? Format.Text;
             SourceBlob = sourceBlob;
             DestinationBlobPrefix = destinationBlobPrefix;
             InputCompression = inputCompression ?? BlobCompression.None;

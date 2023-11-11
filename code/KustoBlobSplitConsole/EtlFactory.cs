@@ -1,10 +1,8 @@
 ﻿using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs.Specialized;
-using CsvBlobSplitterConsole.Csv;
 using CsvBlobSplitterConsole.LineBased;
 using CsvBlobSplitterConsole.Text;
-using System.Reflection.PortableExecutable;
 
 namespace CsvBlobSplitterConsole
 {
@@ -40,22 +38,6 @@ namespace CsvBlobSplitterConsole
                             parsingSink);
 
                         return new SingleSourceEtl(source);
-                    }
-                case Format.Csv:
-                    {
-                        var source = new CsvBlobSource(
-                            sourceBlobClient,
-                            runSettings.InputCompression);
-
-                        return new CsvEtl(
-                            source,
-                            (headers) => new CsvBlobSink(
-                                destinationBlobContainer,
-                                destinationBlobPrefix,
-                                1000000,
-                                runSettings.MaxMbPerShard,
-                                headers),
-                            runSettings.HasHeaders);
                     }
 
                 default:

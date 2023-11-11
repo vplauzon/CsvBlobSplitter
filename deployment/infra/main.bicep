@@ -142,7 +142,20 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
             cpu: '0.25'
             memory: '0.5Gi'
           }
-          env: []
+          env: [
+            {
+              name: 'SourceBlob'
+              value: 'https://${storage.name}.blob.core.windows.net/dev/adx.gz'
+            }
+            {
+              name: 'DestinationBlobPrefix'
+              value: 'https://${storage.name}.blob.core.windows.net/dev/split'
+            }
+            {
+              name: 'InputCompression'
+              value: 'Gzip'
+            }
+          ]
         }
       ]
       scale: {

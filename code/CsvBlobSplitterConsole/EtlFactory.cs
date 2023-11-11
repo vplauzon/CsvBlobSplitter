@@ -1,4 +1,5 @@
-﻿using Azure.Identity;
+﻿using Azure.Core;
+using Azure.Identity;
 using Azure.Storage.Blobs.Specialized;
 using CsvBlobSplitterConsole.Csv;
 using CsvBlobSplitterConsole.LineBased;
@@ -11,7 +12,7 @@ namespace CsvBlobSplitterConsole
     {
         public static IEtl Create(RunSettings runSettings)
         {
-            var credentials = new DefaultAzureCredential();
+            var credentials = GetCredentials(runSettings);
             var sourceBlobClient = new BlockBlobClient(runSettings.SourceBlob, credentials);
             var destinationBlobClient = new BlockBlobClient(
                 runSettings.DestinationBlobPrefix!,
@@ -59,6 +60,21 @@ namespace CsvBlobSplitterConsole
 
                 default:
                     throw new NotSupportedException($"Format '{runSettings.Format}'");
+            }
+        }
+
+        private static TokenCredential GetCredentials(RunSettings runSettings)
+        {
+            switch (runSettings.AuthMode)
+            {
+                case AuthMode.Default:
+                    return new DefaultAzureCredential();
+                case AuthMode.ManagedIdentity:
+                    return new ManagedIdentityCredential(
+                        new ResourceIdentifier(runSettings.ManagedIdentityResourceId!));
+
+                default:
+                    throw new NotSupportedException($"Auth mode:  '{runSettings.AuthMode}'");
             }
         }
     }

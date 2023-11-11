@@ -20,8 +20,6 @@ namespace CsvBlobSplitterConsole
 
         public bool HasHeaders { get; }
 
-        public int MaxRowsPerShard { get; }
-
         public int MaxMbPerShard { get; }
 
         #region Constructors
@@ -33,7 +31,6 @@ namespace CsvBlobSplitterConsole
             var inputCompression = GetEnum<BlobCompression>("InputCompression", false);
             var outputCompression = GetEnum<BlobCompression>("OutputCompression", false);
             var hasHeaders = GetBool("CsvHeaders", false);
-            var maxRowsPerShard = GetInt("MaxRowsPerShard", false);
             var maxMbPerShard = GetInt("MaxMbPerShard", false);
 
             return new RunSettings(
@@ -43,7 +40,6 @@ namespace CsvBlobSplitterConsole
                 inputCompression,
                 outputCompression,
                 hasHeaders,
-                maxRowsPerShard,
                 maxMbPerShard);
         }
 
@@ -54,7 +50,6 @@ namespace CsvBlobSplitterConsole
             BlobCompression? inputCompression,
             BlobCompression? outputCompression,
             bool? hasHeaders,
-            int? maxRowsPerShard,
             int? maxMbPerShard)
         {
             if (destinationBlobPrefix == null)
@@ -68,7 +63,6 @@ namespace CsvBlobSplitterConsole
             InputCompression = inputCompression ?? BlobCompression.None;
             OutputCompression = outputCompression ?? BlobCompression.None;
             HasHeaders = hasHeaders ?? true;
-            MaxRowsPerShard = maxRowsPerShard ?? 1000000;
             MaxMbPerShard = maxMbPerShard ?? 200;
         }
         #endregion

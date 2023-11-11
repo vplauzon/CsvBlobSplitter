@@ -1,10 +1,11 @@
 @description('Location for all resources')
 param location string = resourceGroup().location
 
+var prefix = 'ks'
 var suffix = uniqueString(resourceGroup().id)
 
 resource registry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
-  name: 'registry${suffix}'
+  name: '${prefix}-registry-${suffix}'
   location: location
   sku: {
     name: 'Basic'
@@ -30,13 +31,13 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = 
 }
 
 resource containerFetchingIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: 'containerFetchingId-${suffix}'
+  name: '${prefix}-containerFetchingId-${suffix}'
   location: location
 }
 
 //  Identity orchestrating, i.e. accessing Kusto + Storage
 resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: 'id-app-${suffix}'
+  name: '${prefix}-app-id-${suffix}'
   location: location
 }
 
@@ -54,7 +55,7 @@ resource userIdentityRbacAuthorization 'Microsoft.Authorization/roleAssignments@
 }
 
 resource appEnvironment 'Microsoft.App/managedEnvironments@2022-10-01' = {
-  name: 'app-env-${suffix}'
+  name: '${prefix}-app-env-${suffix}'
   location: location
   sku: {
     name: 'Consumption'
@@ -65,7 +66,7 @@ resource appEnvironment 'Microsoft.App/managedEnvironments@2022-10-01' = {
 }
 
 resource app 'Microsoft.App/containerApps@2022-10-01' = {
-  name: 'app-${suffix}'
+  name: '${prefix}-app-${suffix}'
   location: location
   dependsOn: [
     userIdentityRbacAuthorization

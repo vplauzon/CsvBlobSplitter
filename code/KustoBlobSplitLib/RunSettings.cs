@@ -234,5 +234,22 @@ namespace KustoBlobSplitLib
         }
         #endregion
         #endregion
+
+        public void WriteOutSettings()
+        {
+            Console.WriteLine();
+            Console.WriteLine($"AuthMode:  {AuthMode}");
+            Console.WriteLine($"ManagedIdentityResourceId:  {ManagedIdentityResourceId}");
+            Console.WriteLine($"Format:  {Format}");
+            Console.WriteLine($"SourceBlob:  {SourceBlob}");
+            Console.WriteLine($"DestinationBlobPrefix:  {DestinationBlobPrefix}");
+            Console.WriteLine($"Compression:  {InputCompression}");
+            Console.WriteLine($"Compression:  {OutputCompression}");
+            Console.WriteLine($"HasHeaders:  {HasHeaders}");
+            Console.WriteLine($"MaxMbPerShard:  {MaxMbPerShard}");
+            Console.WriteLine();
+            Console.WriteLine($"Core count:  {Environment.ProcessorCount}");
+            Console.WriteLine();
+        }
     }
 }

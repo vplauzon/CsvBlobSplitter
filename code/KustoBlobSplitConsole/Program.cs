@@ -7,7 +7,9 @@ namespace KustoBlobSplitConsole
     {
         private static async Task Main(string[] args)
         {
-            await EtlRun.RunEtlAsync();
+            var runSettings = RunSettings.FromEnvironmentVariables();
+
+            await EtlRun.RunEtlAsync(runSettings);
         }
     }
 }

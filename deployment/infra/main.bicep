@@ -114,7 +114,7 @@ resource topicBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022
 
   properties: {
     description: 'Azure Service Bus Data Sender'
-    principalId: newBlobTopic.id
+    principalId: newBlobTopic.identity.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39')
   }

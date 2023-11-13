@@ -34,6 +34,10 @@ namespace KustoBlobSplitServiceBus
                     {
                         await ProcessOneMessageAsync(runSettings, receiver, message);
                     }
+                    else
+                    {
+                        Console.WriteLine("No blob detected");
+                    }
                 }
             }
         }

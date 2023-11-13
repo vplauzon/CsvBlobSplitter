@@ -13,7 +13,6 @@ namespace KustoBlobSplitLib
         {
             var stopwatch = new Stopwatch();
 
-            runSettings.WriteOutSettings();
             stopwatch.Start();
 
             var etl = EtlFactory.Create(runSettings);

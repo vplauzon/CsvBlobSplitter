@@ -257,6 +257,7 @@ namespace KustoBlobSplitLib
         {
             Console.WriteLine();
             Console.WriteLine($"AuthMode:  {AuthMode}");
+            Console.WriteLine($"ServiceBusQueueUrl:  {ServiceBusQueueUrl}");
             Console.WriteLine($"ManagedIdentityResourceId:  {ManagedIdentityResourceId}");
             Console.WriteLine($"Format:  {Format}");
             Console.WriteLine($"SourceBlob:  {SourceBlob}");

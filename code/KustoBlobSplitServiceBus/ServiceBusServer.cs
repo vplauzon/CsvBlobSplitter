@@ -1,6 +1,8 @@
 ﻿using Azure.Identity;
 using Azure.Messaging.ServiceBus;
+using Kusto.Ingest.Exceptions;
 using KustoBlobSplitLib;
+using Microsoft.Identity.Client.AppConfig;
 using System.Text.Json;
 
 namespace KustoBlobSplitServiceBus
@@ -20,14 +22,33 @@ namespace KustoBlobSplitServiceBus
                 .FirstOrDefault();
             var credentials = CredentialFactory.GetCredentials(runSettings);
 
-            await using (var client = new ServiceBusClient(uri.Host, credentials))
+            while (true)
             {
-                var receiver = client.CreateReceiver(queueName);
-                var message = await receiver.PeekMessageAsync();
-                var obj = message.Body.ToObjectFromJson<Payload>(new JsonSerializerOptions
+                await using (var client = new ServiceBusClient(uri.Host, credentials))
                 {
-                    PropertyNameCaseInsensitive = true
-                });
+                    var receiver = client.CreateReceiver(queueName);
+                    var message = await receiver.PeekMessageAsync();
+                    var payload = message.Body.ToObjectFromJson<Payload>(new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    if (payload.Data == null
+                        || payload.Time == null
+                        || payload.Data.BlobUrl == null
+                        || !Uri.TryCreate(payload.Data.BlobUrl, UriKind.Absolute, out _))
+                    {
+                        throw new InvalidDataException(
+                            "Queue payload invalid:  this isn't an Event Grid Cloud event");
+                    }
+
+                    Console.WriteLine();
+                    Console.WriteLine($"Queued blob:  {payload.Data?.BlobUrl}");
+                    Console.WriteLine($"Enqueued time:  {payload.Time}");
+
+
+                    //await receiver.CompleteMessageAsync(message);
+                }
             }
         }
     }

@@ -65,27 +65,11 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 
-//  Authorize principal to send to service bus
-resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(appIdentity.id, serviceBus.id, 'rbac')
-  scope: serviceBus
-
-  properties: {
-    description: 'Azure Service Bus Data Sender'
-    principalId: appIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39')
-  }
-}
-
 resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
   name: '${prefix}-newBlobTopic-${suffix}'
   location: location
   identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${appIdentity.id}': {}
-    }
+    type: 'SystemAssigned'
   }
   properties: {
     source: storage.id
@@ -103,8 +87,7 @@ resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
           }
         }
         identity: {
-          type: 'UserAssigned'
-          userAssignedIdentity: appIdentity.id
+          type: 'SystemAssigned'
         }
       }
       filter: {
@@ -121,6 +104,32 @@ resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
         eventTimeToLiveInMinutes: 1440
       }
     }
+  }
+}
+
+//  Authorize topic to send to service bus
+resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(newBlobTopic.id, serviceBus::queue.id, 'rbac')
+  scope: serviceBus::queue
+
+  properties: {
+    description: 'Azure Service Bus Data Sender'
+    principalId: newBlobTopic.id
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39')
+  }
+}
+
+//  Authorize app to receive to service bus
+resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(newBlobTopic.id, serviceBus::queue.id, 'rbac')
+  scope: serviceBus::queue
+
+  properties: {
+    description: 'Azure Service Bus Data Receiver'
+    principalId: newBlobTopic.id
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '4f6d3b9b-027b-4f4c-9142-0e5a2a2247e0')
   }
 }
 

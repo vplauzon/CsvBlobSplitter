@@ -235,6 +235,21 @@ namespace KustoBlobSplitLib
         #endregion
         #endregion
 
+        public RunSettings OverrideSourceBlob(Uri sourceBlobUri)
+        {
+            return new RunSettings(
+                AuthMode,
+                null,
+                ManagedIdentityResourceId,
+                Format,
+                sourceBlobUri,
+                DestinationBlobPrefix,
+                InputCompression,
+                OutputCompression,
+                HasHeaders,
+                MaxMbPerShard);
+        }
+
         public void WriteOutSettings()
         {
             Console.WriteLine();

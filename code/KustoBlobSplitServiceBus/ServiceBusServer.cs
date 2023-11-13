@@ -36,7 +36,7 @@ namespace KustoBlobSplitServiceBus
                     if (payload.Data == null
                         || payload.Time == null
                         || payload.Data.BlobUrl == null
-                        || !Uri.TryCreate(payload.Data.BlobUrl, UriKind.Absolute, out _))
+                        || !payload.Data.BlobUrl.IsAbsoluteUri)
                     {
                         throw new InvalidDataException(
                             "Queue payload invalid:  this isn't an Event Grid Cloud event");
@@ -46,7 +46,10 @@ namespace KustoBlobSplitServiceBus
                     Console.WriteLine($"Queued blob:  {payload.Data?.BlobUrl}");
                     Console.WriteLine($"Enqueued time:  {payload.Time}");
 
+                    var subSettings = runSettings
+                        .OverrideSourceBlob(payload.Data?.BlobUrl!);
 
+                    await EtlRun.RunEtlAsync(subSettings);
                     //await receiver.CompleteMessageAsync(message);
                 }
             }

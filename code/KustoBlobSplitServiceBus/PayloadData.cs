@@ -2,6 +2,6 @@
 {
     internal class PayloadData
     {
-            public string? BlobUrl { get; set; }
+            public Uri? BlobUrl { get; set; }
     }
 }

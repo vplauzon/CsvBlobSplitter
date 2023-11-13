@@ -9,6 +9,8 @@ namespace KustoBlobSplitLib
     public class RunSettings
     {
         public AuthMode AuthMode { get; }
+        
+        public string? ServiceBusQueueUrl { get; }
 
         public string? ManagedIdentityResourceId { get; }
 
@@ -30,6 +32,7 @@ namespace KustoBlobSplitLib
         public static RunSettings FromEnvironmentVariables()
         {
             var authMode = GetEnum<AuthMode>("AuthMode", false);
+            var serviceBusQueueUrl = GetString("ServiceBusQueueUrl", false);
             var managedIdentityResourceId = GetString("ManagedIdentityResourceId", false);
             var format = GetEnum<Format>("Format", false);
             var sourceBlob = GetUri("SourceBlob");
@@ -41,6 +44,7 @@ namespace KustoBlobSplitLib
 
             return new RunSettings(
                 authMode,
+                serviceBusQueueUrl,
                 managedIdentityResourceId,
                 format,
                 sourceBlob,
@@ -53,6 +57,7 @@ namespace KustoBlobSplitLib
 
         public RunSettings(
             AuthMode? authMode,
+            string? serviceBusQueueUrl,
             string? managedIdentityResourceId,
             Format? format,
             Uri sourceBlob,
@@ -73,6 +78,7 @@ namespace KustoBlobSplitLib
             }
 
             AuthMode = authMode ?? AuthMode.Default;
+            ServiceBusQueueUrl = serviceBusQueueUrl;
             ManagedIdentityResourceId = managedIdentityResourceId;
             Format = format ?? Format.Text;
             SourceBlob = sourceBlob;

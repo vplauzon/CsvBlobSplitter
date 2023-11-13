@@ -1,4 +1,5 @@
 using KustoBlobSplitLib;
+using KustoBlobSplitServiceBus;
 using Microsoft.Extensions.Hosting;
 
 namespace KustoBlobSplitServer
@@ -27,6 +28,7 @@ namespace KustoBlobSplitServer
             }
             else
             {   //  Run Service Bus server picking up tasks
+                await ServiceBusServer.RunServerAsync(runSettings);
             }
 
             //  Stop web server

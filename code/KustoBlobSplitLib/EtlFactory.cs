@@ -10,7 +10,7 @@ namespace KustoBlobSplitLib
     {
         public static IEtl Create(RunSettings runSettings)
         {
-            var credentials = GetCredentials(runSettings);
+            var credentials = CredentialFactory.GetCredentials(runSettings);
             var sourceBlobClient = new BlockBlobClient(runSettings.SourceBlob, credentials);
             var destinationBlobClient = new BlockBlobClient(
                 runSettings.DestinationBlobPrefix!,
@@ -42,21 +42,6 @@ namespace KustoBlobSplitLib
 
                 default:
                     throw new NotSupportedException($"Format '{runSettings.Format}'");
-            }
-        }
-
-        private static TokenCredential GetCredentials(RunSettings runSettings)
-        {
-            switch (runSettings.AuthMode)
-            {
-                case AuthMode.Default:
-                    return new DefaultAzureCredential();
-                case AuthMode.ManagedIdentity:
-                    return new ManagedIdentityCredential(
-                        new ResourceIdentifier(runSettings.ManagedIdentityResourceId!));
-
-                default:
-                    throw new NotSupportedException($"Auth mode:  '{runSettings.AuthMode}'");
             }
         }
     }

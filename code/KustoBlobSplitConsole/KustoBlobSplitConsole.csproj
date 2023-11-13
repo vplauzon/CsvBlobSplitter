@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KustoBlobSplitLib\KustoBlobSplitLib.csproj" />
+    <ProjectReference Include="..\KustoBlobSplitServiceBus\KustoBlobSplitServiceBus.csproj" />
   </ItemGroup>
 
 </Project>

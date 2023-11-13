@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using KustoBlobSplitLib;
+using KustoBlobSplitServiceBus;
 
 namespace KustoBlobSplitConsole
 {
@@ -9,7 +10,14 @@ namespace KustoBlobSplitConsole
         {
             var runSettings = RunSettings.FromEnvironmentVariables();
 
-            await EtlRun.RunEtlAsync(runSettings);
+            if (string.IsNullOrWhiteSpace(runSettings.ServiceBusQueueUrl))
+            {   //  Run one ETL
+                await EtlRun.RunEtlAsync(runSettings);
+            }
+            else
+            {   //  Run Service Bus server picking up tasks
+                await ServiceBusServer.RunServerAsync(runSettings);
+            }
         }
     }
 }

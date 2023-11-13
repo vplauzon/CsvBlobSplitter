@@ -1,7 +1,7 @@
 @description('Location for all resources')
 param location string = resourceGroup().location
 
-var prefix = 'ks'
+var prefix = 'kt'
 var suffix = uniqueString(resourceGroup().id)
 
 //  Identity fetching the container images from the registry

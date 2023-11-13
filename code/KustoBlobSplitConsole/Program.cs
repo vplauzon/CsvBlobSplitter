@@ -10,6 +10,7 @@ namespace KustoBlobSplitConsole
         {
             var runSettings = RunSettings.FromEnvironmentVariables();
 
+            runSettings.WriteOutSettings();
             if (string.IsNullOrWhiteSpace(runSettings.ServiceBusQueueUrl))
             {   //  Run one ETL
                 await EtlRun.RunEtlAsync(runSettings);

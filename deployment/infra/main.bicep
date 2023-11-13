@@ -122,12 +122,12 @@ resource topicBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022
 
 //  Authorize app to receive to service bus
 resource appBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(newBlobTopic.id, serviceBus::queue.id, 'rbac')
+  name: guid(appIdentity.id, serviceBus::queue.id, 'rbac')
   scope: serviceBus::queue
 
   properties: {
     description: 'Azure Service Bus Data Receiver'
-    principalId: newBlobTopic.id
+    principalId: appIdentity.properties.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '4f6d3b9b-027b-4f4c-9142-0e5a2a2247e0')
   }

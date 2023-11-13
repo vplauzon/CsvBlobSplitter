@@ -78,6 +78,7 @@ resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
 
   resource newBlobSubscription 'eventSubscriptions' = {
     name: 'toServiceBus'
+    dependsOn: [ topicBusRbacAuthorization ]
     properties: {
       deliveryWithResourceIdentity: {
         destination: {

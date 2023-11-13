@@ -95,11 +95,17 @@ resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
   resource newBlobSubscription 'eventSubscriptions' = {
     name: 'toServiceBus'
     properties: {
-      destination: {
-        properties: {
-          resourceId: serviceBus::queue
+      deliveryWithResourceIdentity: {
+        destination: {
+          endpointType: 'ServiceBusQueue'
+          properties: {
+            resourceId: serviceBus::queue.id
+          }
         }
-        endpointType: 'ServiceBusQueue'
+        identity: {
+          type: 'UserAssigned'
+          userAssignedIdentity: appIdentity.id
+        }
       }
       filter: {
         includedEventTypes: [

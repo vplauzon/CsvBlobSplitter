@@ -108,7 +108,7 @@ resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
 }
 
 //  Authorize topic to send to service bus
-resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource topicBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(newBlobTopic.id, serviceBus::queue.id, 'rbac')
   scope: serviceBus::queue
 
@@ -121,7 +121,7 @@ resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@20
 }
 
 //  Authorize app to receive to service bus
-resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource appBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(newBlobTopic.id, serviceBus::queue.id, 'rbac')
   scope: serviceBus::queue
 

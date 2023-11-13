@@ -16,6 +16,25 @@ resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
   location: location
 }
 
+resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
+  name: '${prefix}-service-bus-${suffix}'
+  location: location
+  sku: {
+    capacity: 1
+    name: 'Standard'
+    tier: 'Standard'
+  }
+
+  resource queue 'queues' = {
+    name: 'blob-notification'
+    properties: {
+      enableBatchedOperations: true
+      enableExpress: false
+      enablePartitioning: true
+    }
+  }
+}
+
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: '${prefix}storage${suffix}'
   location: location

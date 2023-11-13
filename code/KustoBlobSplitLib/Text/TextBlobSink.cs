@@ -65,7 +65,7 @@ namespace KustoBlobSplitLib.LineBased
                 ? await DequeueHeaderAsync(fragmentQueue, releaseQueue)
                 : null;
             var processContext = new ProcessContext(header);
-            var parallelism = 4 * Environment.ProcessorCount + 1;
+            var parallelism = 2 * Environment.ProcessorCount + 1;
             var processTasks = Enumerable.Range(0, parallelism)
                 .Select(i => ProcessFragmentsAsync(
                     processContext,

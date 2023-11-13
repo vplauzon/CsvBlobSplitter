@@ -79,7 +79,7 @@ resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@20
 }
 
 resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
-  name: 'newBlobTopic'
+  name: '${prefix}-newBlobTopic-${suffix}'
   location: location
   identity: {
     type: 'UserAssigned'

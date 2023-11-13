@@ -42,12 +42,6 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     name: 'Standard_LRS'
   }
   kind: 'StorageV2'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${appIdentity.id}': {}
-    }
-  }
   properties: {
     isHnsEnabled: true
   }
@@ -81,6 +75,45 @@ resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@20
     principalId: appIdentity.properties.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39')
+  }
+}
+
+resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
+  name: 'newBlobTopic'
+  location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${appIdentity.id}': {}
+    }
+  }
+  properties: {
+    source: storage.id
+    topicType: 'Microsoft.Storage.StorageAccounts'
+  }
+
+  resource newBlobSubscription 'eventSubscriptions' = {
+    name: 'toServiceBus'
+    properties: {
+      destination: {
+        properties: {
+          resourceId: serviceBus::queue
+        }
+        endpointType: 'ServiceBusQueue'
+      }
+      filter: {
+        includedEventTypes: [
+          'Microsoft.Storage.BlobCreated'
+        ]
+        enableAdvancedFilteringOnArrays: true
+      }
+      labels: []
+      eventDeliverySchema: 'CloudEventSchemaV1_0'
+      retryPolicy: {
+        maxDeliveryAttempts: 30
+        eventTimeToLiveInMinutes: 1440
+      }
+    }
   }
 }
 

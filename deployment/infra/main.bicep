@@ -275,7 +275,7 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
             }
             {
               name: 'OutputCompression'
-              value: 'Gzip'
+              value: 'None'
             }
           ]
         }

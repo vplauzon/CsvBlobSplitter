@@ -32,6 +32,11 @@ namespace KustoBlobSplitServiceBus
                     {
                         PropertyNameCaseInsensitive = true
                     });
+                    var ctSource = new CancellationTokenSource();
+                    var renewTask = RecurrentlyRenewLockAsync(
+                        receiver,
+                        message,
+                        ctSource.Token);
 
                     if (payload.Data == null
                         || payload.Time == null
@@ -50,8 +55,28 @@ namespace KustoBlobSplitServiceBus
                         .OverrideSourceBlob(payload.Data?.BlobUrl!);
 
                     await EtlRun.RunEtlAsync(subSettings);
-                    //await receiver.CompleteMessageAsync(message);
+                    ctSource.Cancel();
+                    await renewTask;
+                    await receiver.CompleteMessageAsync(message);
                 }
+            }
+        }
+
+        private static async Task RecurrentlyRenewLockAsync(
+            ServiceBusReceiver receiver,
+            ServiceBusReceivedMessage message,
+            CancellationToken ct)
+        {
+            try
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(20), ct);
+                    await receiver.RenewMessageLockAsync(message);
+                }
+            }
+            catch (TaskCanceledException)
+            {
             }
         }
     }

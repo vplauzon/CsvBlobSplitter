@@ -244,6 +244,10 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
               value: 'ManagedIdentity'
             }
             {
+              name: 'ServiceBusQueueUrl'
+              value: '${serviceBus.properties.serviceBusEndpoint}/${serviceBus::queue.name}'
+            }
+            {
               name: 'ManagedIdentityResourceId'
               value: appIdentity.id
             }

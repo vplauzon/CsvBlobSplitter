@@ -267,7 +267,7 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
             }
             {
               name: 'DestinationBlobPrefix'
-              value: 'https://${storage.name}.blob.core.windows.net/dev/split/Segment-'
+              value: 'https://${storage.name}.blob.core.windows.net/dev/split/'
             }
             {
               name: 'InputCompression'

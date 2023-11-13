@@ -27,7 +27,7 @@ namespace KustoBlobSplitServiceBus
                 await using (var client = new ServiceBusClient(uri.Host, credentials))
                 {
                     var receiver = client.CreateReceiver(queueName);
-                    var message = await receiver.PeekMessageAsync();
+                    var message = await receiver.ReceiveMessageAsync();
                     var payload = message.Body.ToObjectFromJson<Payload>(new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true

@@ -108,6 +108,7 @@ resource newBlobTopic 'Microsoft.EventGrid/systemTopics@2023-06-01-preview' = {
         }
       }
       filter: {
+        subjectBeginsWith :'/blobServices/default/containers/dev/blobs/landing/'
         includedEventTypes: [
           'Microsoft.Storage.BlobCreated'
         ]

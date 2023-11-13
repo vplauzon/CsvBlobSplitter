@@ -42,6 +42,9 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     name: 'Standard_LRS'
   }
   kind: 'StorageV2'
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     isHnsEnabled: true
   }
@@ -62,6 +65,19 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
         publicAccess: 'None'
       }
     }
+  }
+}
+
+//  Authorize storage to send to service bus
+resource storageBusRbacAuthorization 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, serviceBus.id, 'rbac')
+  scope: serviceBus
+
+  properties: {
+    description: 'Azure Service Bus Data Sender'
+    principalId: storage.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39')
   }
 }
 

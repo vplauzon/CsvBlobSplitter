@@ -1,4 +1,5 @@
-﻿using Azure.Identity;
+﻿using Azure.Core;
+using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 using Kusto.Ingest.Exceptions;
 using KustoBlobSplitLib;
@@ -22,44 +23,56 @@ namespace KustoBlobSplitServiceBus
                 .FirstOrDefault();
             var credentials = CredentialFactory.GetCredentials(runSettings);
 
-            while (true)
+            await using (var client = new ServiceBusClient(uri.Host, credentials))
+            await using (var receiver = client.CreateReceiver(queueName))
             {
-                await using (var client = new ServiceBusClient(uri.Host, credentials))
+                while (true)
                 {
-                    var receiver = client.CreateReceiver(queueName);
-                    var message = await receiver.ReceiveMessageAsync();
-                    var payload = message.Body.ToObjectFromJson<Payload>(new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                    var ctSource = new CancellationTokenSource();
-                    var renewTask = RecurrentlyRenewLockAsync(
-                        receiver,
-                        message,
-                        ctSource.Token);
+                    var message = await receiver.ReceiveMessageAsync(TimeSpan.FromMinutes(1));
 
-                    if (payload.Data == null
-                        || payload.Time == null
-                        || payload.Data.BlobUrl == null
-                        || !payload.Data.BlobUrl.IsAbsoluteUri)
+                    if (message != null)
                     {
-                        throw new InvalidDataException(
-                            "Queue payload invalid:  this isn't an Event Grid Cloud event");
+                        await ProcessOneMessageAsync(runSettings, receiver, message);
                     }
-
-                    Console.WriteLine();
-                    Console.WriteLine($"Queued blob:  {payload.Data?.BlobUrl}");
-                    Console.WriteLine($"Enqueued time:  {payload.Time}");
-
-                    var subSettings = runSettings
-                        .OverrideSourceBlob(payload.Data?.BlobUrl!);
-
-                    await EtlRun.RunEtlAsync(subSettings);
-                    ctSource.Cancel();
-                    await renewTask;
-                    await receiver.CompleteMessageAsync(message);
                 }
             }
+        }
+
+        private static async Task ProcessOneMessageAsync(
+            RunSettings runSettings,
+            ServiceBusReceiver receiver,
+            ServiceBusReceivedMessage message)
+        {
+            var payload = message.Body.ToObjectFromJson<Payload>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            var ctSource = new CancellationTokenSource();
+            var renewTask = RecurrentlyRenewLockAsync(
+                receiver,
+                message,
+                ctSource.Token);
+
+            if (payload.Data == null
+                || payload.Time == null
+                || payload.Data.BlobUrl == null
+                || !payload.Data.BlobUrl.IsAbsoluteUri)
+            {
+                throw new InvalidDataException(
+                    "Queue payload invalid:  this isn't an Event Grid Cloud event");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"Queued blob:  {payload.Data?.BlobUrl}");
+            Console.WriteLine($"Enqueued time:  {payload.Time}");
+
+            var subSettings = runSettings
+                .OverrideSourceBlob(payload.Data?.BlobUrl!);
+
+            await EtlRun.RunEtlAsync(subSettings);
+            ctSource.Cancel();
+            await renewTask;
+            await receiver.CompleteMessageAsync(message);
         }
 
         private static async Task RecurrentlyRenewLockAsync(

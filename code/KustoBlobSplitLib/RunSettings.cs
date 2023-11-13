@@ -237,13 +237,16 @@ namespace KustoBlobSplitLib
 
         public RunSettings OverrideSourceBlob(Uri sourceBlobUri)
         {
+            var destinationBlobPrefix =
+                new Uri($"{DestinationBlobPrefix}/{sourceBlobUri.LocalPath}/segment-");
+
             return new RunSettings(
                 AuthMode,
                 null,
                 ManagedIdentityResourceId,
                 Format,
                 sourceBlobUri,
-                DestinationBlobPrefix,
+                destinationBlobPrefix,
                 InputCompression,
                 OutputCompression,
                 HasHeaders,

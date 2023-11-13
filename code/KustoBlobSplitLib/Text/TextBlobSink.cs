@@ -14,25 +14,6 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal class TextBlobSink : ITextSink
     {
-        #region Inner Types
-        private class ProcessContext
-        {
-            private volatile int _counter = 0;
-
-            public ProcessContext(byte[]? header)
-            {
-                Header = header;
-            }
-
-            public byte[]? Header { get; }
-
-            public int GetNewCounterValue()
-            {
-                return Interlocked.Increment(ref _counter);
-            }
-        }
-        #endregion
-
         private const int WRITING_BUFFER_SIZE = 20 * 1024 * 1024;
 
         private readonly BlobContainerClient _destinationBlobContainer;
@@ -40,19 +21,22 @@ namespace KustoBlobSplitLib.LineBased
         private readonly BlobCompression _compression;
         private readonly long _maxBytesPerShard;
         private readonly bool _hasHeaders;
+        private readonly int _shardIndex;
 
         public TextBlobSink(
             BlobContainerClient destinationBlobContainer,
             string destinationBlobPrefix,
             BlobCompression compression,
             int maxMbPerShard,
-            bool hasHeaders)
+            bool hasHeaders,
+            int shardIndex)
         {
             _destinationBlobContainer = destinationBlobContainer;
             _destinationBlobPrefix = destinationBlobPrefix;
             _compression = compression;
             _maxBytesPerShard = ((long)maxMbPerShard) * 1024 * 1024;
             _hasHeaders = hasHeaders;
+            _shardIndex = shardIndex;
         }
 
         bool ITextSink.HasHeaders => _hasHeaders;
@@ -64,29 +48,10 @@ namespace KustoBlobSplitLib.LineBased
             var header = _hasHeaders
                 ? await DequeueHeaderAsync(fragmentQueue, releaseQueue)
                 : null;
-            var processContext = new ProcessContext(header);
-            var parallelism = 2 * Environment.ProcessorCount + 1;
-            var processTasks = Enumerable.Range(0, parallelism)
-                .Select(i => ProcessFragmentsAsync(
-                    processContext,
-                    fragmentQueue,
-                    releaseQueue,
-                    new byte[0]))
-                .ToArray();
-
-            await Task.WhenAll(processTasks);
-        }
-
-        private async Task ProcessFragmentsAsync(
-            ProcessContext processContext,
-            WaitingQueue<TextFragment> fragmentQueue,
-            WaitingQueue<int> releaseQueue,
-            byte[] copyBuffer)
-        {
+            var copyBuffer = new byte[0];
             var stopwatch = new Stopwatch();
 
             stopwatch.Start();
-
             //  We pre-fetch a fragment not to create an empty blob
             var fragmentResult = await fragmentQueue.DequeueAsync();
 
@@ -97,18 +62,17 @@ namespace KustoBlobSplitLib.LineBased
                 {
                     BufferSize = WRITING_BUFFER_SIZE
                 };
-                var counter = processContext.GetNewCounterValue();
                 var shardName =
-                    $"{_destinationBlobPrefix}-{counter}.csv{GetCompressionExtension()}";
+                    $"{_destinationBlobPrefix}-{_shardIndex}.csv{GetCompressionExtension()}";
                 var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
 
                 using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
                 using (var compressedStream = CompressedStream(blobStream))
                 using (var countingStream = new ByteCountingStream(compressedStream))
                 {
-                    if (processContext.Header != null)
+                    if (header != null)
                     {
-                        await countingStream.WriteAsync(processContext.Header);
+                        await countingStream.WriteAsync(header);
                     }
                     do
                     {
@@ -133,12 +97,6 @@ namespace KustoBlobSplitLib.LineBased
                     && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);
                 }
                 Console.WriteLine($"Sealing blob {shardName} ({stopwatch.Elapsed})");
-                //  Recurrent call
-                await ProcessFragmentsAsync(
-                    processContext,
-                    fragmentQueue,
-                    releaseQueue,
-                    copyBuffer);
             }
         }
 

@@ -8,8 +8,6 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal interface ITextSink
     {
-        bool HasHeaders { get; }
-
         Task ProcessAsync(
             TextFragment? headerFragment,
             IWaitingQueue<TextFragment> fragmentQueue,

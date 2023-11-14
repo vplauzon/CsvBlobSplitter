@@ -13,13 +13,13 @@ namespace KustoBlobSplitLib.Text
         private const int SINK_BUFFER_SIZE = 1024 * 1024;
 
         private readonly ITextSink _nextSink;
+        private readonly bool _propagateHeader;
 
-        public TextLineParsingSink(ITextSink nextSink)
+        public TextLineParsingSink(ITextSink nextSink, bool propagateHeader)
         {
             _nextSink = nextSink;
+            _propagateHeader = propagateHeader;
         }
-
-        bool ITextSink.HasHeaders => _nextSink.HasHeaders;
 
         async Task ITextSink.ProcessAsync(
             TextFragment? headerFragment,
@@ -34,7 +34,7 @@ namespace KustoBlobSplitLib.Text
             var outputFragmentQueue =
                 new WaitingQueue<TextFragment>() as IWaitingQueue<TextFragment>;
             var outputFragmentBytes = (IEnumerable<byte>?)null;
-            var sinkTask = _nextSink.HasHeaders
+            var sinkTask = _propagateHeader
                 ? null
                 : _nextSink.ProcessAsync(null, outputFragmentQueue, releaseQueue);
 

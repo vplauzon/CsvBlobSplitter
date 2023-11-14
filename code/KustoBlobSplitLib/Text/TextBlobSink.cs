@@ -20,7 +20,6 @@ namespace KustoBlobSplitLib.LineBased
         private readonly string _destinationBlobPrefix;
         private readonly BlobCompression _compression;
         private readonly long _maxBytesPerShard;
-        private readonly bool _hasHeaders;
         private readonly int _shardIndex;
 
         public TextBlobSink(
@@ -28,18 +27,14 @@ namespace KustoBlobSplitLib.LineBased
             string destinationBlobPrefix,
             BlobCompression compression,
             int maxMbPerShard,
-            bool hasHeaders,
             int shardIndex)
         {
             _destinationBlobContainer = destinationBlobContainer;
             _destinationBlobPrefix = destinationBlobPrefix;
             _compression = compression;
             _maxBytesPerShard = ((long)maxMbPerShard) * 1024 * 1024;
-            _hasHeaders = hasHeaders;
             _shardIndex = shardIndex;
         }
-
-        bool ITextSink.HasHeaders => _hasHeaders;
 
         async Task ITextSink.ProcessAsync(
             TextFragment? headerFragment,

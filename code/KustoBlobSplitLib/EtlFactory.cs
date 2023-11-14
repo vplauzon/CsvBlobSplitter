@@ -26,15 +26,15 @@ namespace KustoBlobSplitLib
                 case Format.Text:
                     {
                         var splitSink = new TextSplitSink(
-                            runSettings.HasHeaders,
                             (shardIndex) => new TextBlobSink(
                                 destinationBlobContainer,
                                 destinationBlobPrefix,
                                 runSettings.OutputCompression,
                                 runSettings.MaxMbPerShard,
-                                runSettings.HasHeaders,
                                 shardIndex));
-                        var parsingSink = new TextLineParsingSink(splitSink);
+                        var parsingSink = new TextLineParsingSink(
+                            splitSink,
+                            runSettings.HasHeaders);
                         var source = new TextSource(
                             sourceBlobClient,
                             runSettings.InputCompression,

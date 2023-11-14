@@ -27,16 +27,12 @@ namespace KustoBlobSplitLib.LineBased
         }
         #endregion
 
-        private readonly bool _hasHeaders;
         private readonly Func<int, ITextSink> _sinkFactory;
 
-        public TextSplitSink(bool hasHeaders, Func<int, ITextSink> sinkFactory)
+        public TextSplitSink(Func<int, ITextSink> sinkFactory)
         {
-            _hasHeaders = hasHeaders;
             _sinkFactory = sinkFactory;
         }
-
-        bool ITextSink.HasHeaders => _hasHeaders;
 
         async Task ITextSink.ProcessAsync(
             TextFragment? headerFragment,

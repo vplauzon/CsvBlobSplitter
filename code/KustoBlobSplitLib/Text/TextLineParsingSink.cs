@@ -33,7 +33,7 @@ namespace KustoBlobSplitLib.Text
 
             var outputFragmentQueue =
                 new WaitingQueue<TextFragment>() as IWaitingQueue<TextFragment>;
-            var outputFragmentBytes = (IEnumerable<byte>?)null;
+            var outputFragment = TextFragment.Empty;
             var sinkTask = _propagateHeader
                 ? null
                 : _nextSink.ProcessAsync(null, outputFragmentQueue, releaseQueue);
@@ -44,10 +44,8 @@ namespace KustoBlobSplitLib.Text
 
                 if (inputResult.IsCompleted)
                 {
-                    if (outputFragmentBytes != null)
-                    {   //  Push what is left (in case no \n at the end of line)
-                        PushFragment(outputFragmentQueue, outputFragmentBytes);
-                    }
+                    //  Push what is left (in case no \n at the end of line)
+                    PushFragment(outputFragmentQueue, outputFragment);
                     outputFragmentQueue.Complete();
                     if (sinkTask != null)
                     {
@@ -67,20 +65,17 @@ namespace KustoBlobSplitLib.Text
                         throw new NotSupportedException(
                             "FragmentBlock should always be present in this context");
                     }
-
                     foreach (var b in fragmentBlock)
                     {
                         if (b == '\n')
                         {
-                            if (i + (outputFragmentBytes?.Count() ?? 0) > SINK_BUFFER_SIZE
+                            if (i + outputFragment.Count() > SINK_BUFFER_SIZE
                                 || sinkTask == null)
                             {
-                                var fragment = MergeFragments(
-                                    outputFragmentBytes,
-                                    fragmentBlock
+                                outputFragment = outputFragment.Merge(fragmentBlock
                                     .SpliceBefore(i)
-                                    .SpliceAfter(lastPushIndex));
-
+                                    .SpliceAfter(lastPushIndex)
+                                    .ToTextFragment());
                                 if (sinkTask == null)
                                 {
                                     //  Init sink task with header
@@ -89,8 +84,8 @@ namespace KustoBlobSplitLib.Text
                                         outputFragmentQueue,
                                         releaseQueue);
                                 }
-                                PushFragment(outputFragmentQueue, fragment);
-                                outputFragmentBytes = null;
+                                PushFragment(outputFragmentQueue, outputFragment);
+                                outputFragment = TextFragment.Empty;
                                 lastPushIndex = i;
                             }
                         }
@@ -98,9 +93,8 @@ namespace KustoBlobSplitLib.Text
                     }
                     if (lastPushIndex < fragmentBlock.Count() - 1)
                     {   //  Keep fragment
-                        outputFragmentBytes = MergeFragments(
-                            outputFragmentBytes,
-                            fragmentBlock.SpliceAfter(lastPushIndex));
+                        outputFragment = outputFragment.Merge(
+                            fragmentBlock.SpliceAfter(lastPushIndex).ToTextFragment());
                     }
                 }
             }
@@ -108,27 +102,17 @@ namespace KustoBlobSplitLib.Text
 
         private void PushFragment(
             IWaitingQueue<TextFragment> outputFragmentQueue,
-            IEnumerable<byte> outputFragmentBytes)
+            TextFragment fragment)
         {
-            var fragment = outputFragmentBytes is MemoryBlock block
-                ? new TextFragment(block, block)
-                : new TextFragment(outputFragmentBytes, null);
-
-            if (fragment.FragmentBytes == null)
+            if (fragment.Any())
             {
-                throw new ArgumentNullException(nameof(fragment.FragmentBytes));
+                if (fragment.FragmentBytes == null)
+                {
+                    throw new ArgumentNullException(nameof(fragment.FragmentBytes));
+                }
+
+                outputFragmentQueue.Enqueue(fragment);
             }
-
-            outputFragmentQueue.Enqueue(fragment);
-        }
-
-        private static IEnumerable<byte> MergeFragments(
-            IEnumerable<byte>? outputFragmentBytes,
-            MemoryBlock fragmentBlock)
-        {
-            return outputFragmentBytes == null
-                ? fragmentBlock
-                : outputFragmentBytes.Concat(fragmentBlock);
         }
     }
 }

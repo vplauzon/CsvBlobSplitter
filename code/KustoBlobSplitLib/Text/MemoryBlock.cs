@@ -27,6 +27,26 @@ namespace KustoBlobSplitLib.LineBased
             return new MemoryBlock(Buffer, Offset + index + 1, Length - index - 1);
         }
 
+        public TextFragment ToTextFragment()
+        {
+            return new TextFragment(this, this);
+        }
+
+        public MemoryBlock? TryMerge(MemoryBlock other)
+        {
+            return object.ReferenceEquals(Buffer, other.Buffer)
+                && Offset + Length == other.Offset
+                ? new MemoryBlock(Buffer, Offset, Length + other.Length)
+                : null;
+        }
+
+        /// <summary>For debugging purposes.</summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            return new string(this.Select(b => (char)b).ToArray());
+        }
+
         #region ICollection<byte> Methods
         bool ICollection<byte>.IsReadOnly => true;
 

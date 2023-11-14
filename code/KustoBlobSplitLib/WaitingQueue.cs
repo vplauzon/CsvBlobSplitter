@@ -16,10 +16,16 @@ namespace KustoBlobSplitLib
 
         bool IWaitingQueue<T>.HasData => _queue.Any();
 
-        bool IWaitingQueue<T>.HasCompleted => _isCompletedSource.Task.IsCompleted;
+        bool IWaitingQueue<T>.HasCompleted => _isCompletedSource.Task.IsCompleted
+            && !_queue.Any();
 
         void IWaitingQueue<T>.Enqueue(T item)
         {
+            if (_isCompletedSource.Task.IsCompleted)
+            {
+                throw new InvalidDataException("Queue is already marked as completed");
+            }
+
             var oldSource = Interlocked.Exchange(
                 ref _newItemSource,
                 new());

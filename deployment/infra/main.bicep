@@ -214,19 +214,6 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
   properties: {
     configuration: {
       activeRevisionsMode: 'Single'
-      ingress: {
-        allowInsecure: false
-        exposedPort: 0
-        external: false
-        targetPort: 80
-        transport: 'auto'
-        traffic: [
-          {
-            latestRevision: true
-            weight: 100
-          }
-        ]
-      }
       registries: [
         {
           identity: containerFetchingIdentity.id

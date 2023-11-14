@@ -73,6 +73,7 @@ namespace KustoBlobSplitLib
                     runSettings.KustoDb!,
                     runSettings.KustoTable!,
                     tempFolder,
+                    runSettings.SourceBlob,
                     runSettings.OutputCompression,
                     runSettings.MaxMbPerShard,
                     shardIndex);

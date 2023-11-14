@@ -17,6 +17,7 @@ namespace KustoBlobSplitLib.LineBased
         private readonly IKustoQueuedIngestClient _ingestClient;
         private readonly string _kustoDb;
         private readonly string _kustoTable;
+        private readonly Uri _sourceUri;
         private readonly string _filePath;
 
         public TextKustoSink(
@@ -24,6 +25,7 @@ namespace KustoBlobSplitLib.LineBased
             string kustoDb,
             string kustoTable,
             string localTempFolder,
+            Uri sourceUri,
             BlobCompression compression,
             int maxMbPerShard,
             int shardIndex)
@@ -32,6 +34,7 @@ namespace KustoBlobSplitLib.LineBased
             _ingestClient = ingestClient;
             _kustoDb = kustoDb;
             _kustoTable = kustoTable;
+            _sourceUri = sourceUri;
             _filePath = Path.Combine(localTempFolder, $"{ShardIndex}.txt");
         }
 
@@ -47,9 +50,12 @@ namespace KustoBlobSplitLib.LineBased
         protected override async Task PostWriteAsync()
         {
             var stream = File.OpenRead(_filePath);
+            var tagValue = $"{_sourceUri}-{ShardIndex}";
             var properties = new KustoIngestionProperties(_kustoDb, _kustoTable)
             {
-                Format = DataSourceFormat.txt
+                Format = DataSourceFormat.txt,
+                IngestByTags = new[] { tagValue },
+                IngestIfNotExists = new[] { tagValue }
             };
 
             await _ingestClient.IngestFromStreamAsync(

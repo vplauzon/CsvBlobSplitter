@@ -19,6 +19,8 @@ namespace KustoBlobSplitLib
         public Uri SourceBlob { get; }
 
         public Uri? DestinationBlobPrefix { get; }
+        
+        public Uri? KustoIngestUri { get; }
 
         public BlobCompression InputCompression { get; }
 
@@ -37,6 +39,7 @@ namespace KustoBlobSplitLib
             var format = GetEnum<Format>("Format", false);
             var sourceBlob = GetUri("SourceBlob");
             var destinationBlobPrefix = GetUri("DestinationBlobPrefix", false);
+            var kustoIngestUri = GetUri("KustoIngestUri", false);
             var inputCompression = GetEnum<BlobCompression>("InputCompression", false);
             var outputCompression = GetEnum<BlobCompression>("OutputCompression", false);
             var hasHeaders = GetBool("CsvHeaders", false);
@@ -49,6 +52,7 @@ namespace KustoBlobSplitLib
                 format,
                 sourceBlob,
                 destinationBlobPrefix,
+                kustoIngestUri,
                 inputCompression,
                 outputCompression,
                 hasHeaders,
@@ -62,6 +66,7 @@ namespace KustoBlobSplitLib
             Format? format,
             Uri sourceBlob,
             Uri? destinationBlobPrefix,
+            Uri? kustoIngestUri,
             BlobCompression? inputCompression,
             BlobCompression? outputCompression,
             bool? hasHeaders,
@@ -83,6 +88,7 @@ namespace KustoBlobSplitLib
             Format = format ?? Format.Text;
             SourceBlob = sourceBlob;
             DestinationBlobPrefix = destinationBlobPrefix;
+            KustoIngestUri = kustoIngestUri;
             InputCompression = inputCompression ?? BlobCompression.None;
             OutputCompression = outputCompression ?? BlobCompression.None;
             HasHeaders = hasHeaders ?? true;
@@ -247,6 +253,7 @@ namespace KustoBlobSplitLib
                 Format,
                 sourceBlobUri,
                 destinationBlobPrefix,
+                KustoIngestUri,
                 InputCompression,
                 OutputCompression,
                 HasHeaders,

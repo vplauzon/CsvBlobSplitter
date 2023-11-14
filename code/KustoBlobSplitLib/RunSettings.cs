@@ -8,6 +8,7 @@ namespace KustoBlobSplitLib
 {
     public class RunSettings
     {
+        #region Properties
         public AuthMode AuthMode { get; }
 
         public string? ServiceBusQueueUrl { get; }
@@ -33,6 +34,7 @@ namespace KustoBlobSplitLib
         public bool HasHeaders { get; }
 
         public int MaxMbPerShard { get; }
+        #endregion
 
         #region Constructors
         public static RunSettings FromEnvironmentVariables()
@@ -289,6 +291,9 @@ namespace KustoBlobSplitLib
             Console.WriteLine($"Format:  {Format}");
             Console.WriteLine($"SourceBlob:  {SourceBlob}");
             Console.WriteLine($"DestinationBlobPrefix:  {DestinationBlobPrefix}");
+            Console.WriteLine($"KustoIngestUri:  {KustoIngestUri}");
+            Console.WriteLine($"KustoDb:  {KustoDb}");
+            Console.WriteLine($"KustoTable:  {KustoTable}");
             Console.WriteLine($"Compression:  {InputCompression}");
             Console.WriteLine($"Compression:  {OutputCompression}");
             Console.WriteLine($"HasHeaders:  {HasHeaders}");

@@ -76,7 +76,7 @@ namespace KustoBlobSplitLib.LineBased
                             copyBuffer,
                             fragment,
                             countingStream);
-                        releaseQueue.Enqueue(fragment.FragmentBytes.Count());
+                        releaseQueue.Enqueue(fragment.Count());
                     }
                     while (countingStream.Position < _maxBytesPerShard
                     && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);

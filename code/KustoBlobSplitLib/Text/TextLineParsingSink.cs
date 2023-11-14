@@ -57,7 +57,7 @@ namespace KustoBlobSplitLib.Text
                 else
                 {
                     var i = 0;
-                    var lastPushIndex = 0;
+                    var lastPushedIndex = -1;
                     var fragmentBlock = inputResult.Item!.FragmentBlock;
 
                     if (fragmentBlock == null)
@@ -74,27 +74,31 @@ namespace KustoBlobSplitLib.Text
                             {
                                 outputFragment = outputFragment.Merge(fragmentBlock
                                     .SpliceBefore(i)
-                                    .SpliceAfter(lastPushIndex)
+                                    .SpliceAfter(lastPushedIndex)
                                     .ToTextFragment());
                                 if (sinkTask == null)
                                 {
                                     //  Init sink task with header
                                     sinkTask = _nextSink.ProcessAsync(
-                                        null,
+                                        outputFragment.FragmentBytes.ToArray().ToTextFragment(),
                                         outputFragmentQueue,
                                         releaseQueue);
+                                    releaseQueue.Enqueue(outputFragment.Count());
                                 }
-                                PushFragment(outputFragmentQueue, outputFragment);
+                                else
+                                {
+                                    PushFragment(outputFragmentQueue, outputFragment);
+                                }
                                 outputFragment = TextFragment.Empty;
-                                lastPushIndex = i;
+                                lastPushedIndex = i;
                             }
                         }
                         ++i;
                     }
-                    if (lastPushIndex < fragmentBlock.Count() - 1)
+                    if (lastPushedIndex < fragmentBlock.Count() - 1)
                     {   //  Keep fragment
                         outputFragment = outputFragment.Merge(
-                            fragmentBlock.SpliceAfter(lastPushIndex).ToTextFragment());
+                            fragmentBlock.SpliceAfter(lastPushedIndex).ToTextFragment());
                     }
                 }
             }

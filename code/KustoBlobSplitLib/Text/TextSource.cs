@@ -76,7 +76,7 @@ namespace KustoBlobSplitLib.LineBased
                         {
                             var block = new MemoryBlock(buffer, readingIndex, readLength);
 
-                            fragmentQueue.Enqueue(new TextFragment(block, block));
+                            fragmentQueue.Enqueue(block.ToTextFragment());
                             bufferAvailable -= readLength;
                             readingIndex = (readingIndex + readLength) % BUFFER_SIZE;
                         }
@@ -93,6 +93,10 @@ namespace KustoBlobSplitLib.LineBased
                                     "releaseQueue should never be observed as completed");
                             }
                             bufferAvailable += returnLengthResult.Item;
+                            if (bufferAvailable > BUFFER_SIZE)
+                            {
+                                throw new InvalidDataException("Buffer invalid");
+                            }
                         }
                     }
                 }

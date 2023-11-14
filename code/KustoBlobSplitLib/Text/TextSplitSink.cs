@@ -42,14 +42,23 @@ namespace KustoBlobSplitLib.LineBased
 
                 if (!fragmentResult.IsCompleted)
                 {
-                    QueueFragment(
-                        fragmentResult.Item!,
-                        subSinkTasks,
-                        subQueues,
-                        releaseQueue,
-                        header,
-                        ref shardCount);
-                    CleanSubSinks(subSinkTasks, subQueues);
+                    var isQueued = false;
+
+                    while (!isQueued)
+                    {
+                        CleanSubSinks(subSinkTasks, subQueues);
+                        isQueued = QueueFragment(
+                            fragmentResult.Item!,
+                            subSinkTasks,
+                            subQueues,
+                            releaseQueue,
+                            header,
+                            ref shardCount);
+                        if (!isQueued)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(0.2));
+                        }
+                    }
                 }
                 else
                 {   //  Signal end to each sub sink
@@ -62,7 +71,7 @@ namespace KustoBlobSplitLib.LineBased
             }
         }
 
-        private void QueueFragment(
+        private bool QueueFragment(
             TextFragment textFragment,
             List<Task> subSinkTasks,
             List<WaitingQueue<TextFragment>> subQueues,
@@ -78,23 +87,33 @@ namespace KustoBlobSplitLib.LineBased
                 if (!subSinkTask.IsCompleted && subQueue.IsConsumerWaiting)
                 {
                     subQueue.Enqueue(textFragment);
-                    return;
+
+                    return true;
                 }
             }
-            //  If we reached this point, no queue was awaiting fragments
-            //  so we create a new one
-            var newSubQueue = new WaitingQueue<TextFragment>();
-            var newSubSink = _sinkFactory(++shardCount);
-            var newSubTask = Task.Run(() => newSubSink.ProcessAsync(newSubQueue, releaseQueue));
-
-            subQueues.Add(newSubQueue);
-            subSinkTasks.Add(newSubTask);
-            //  We finally pass the header and fragment
-            if (header != null)
+            if (subSinkTasks.Count <= 2 * Environment.ProcessorCount)
             {
-                newSubQueue.Enqueue(new TextFragment(header, null));
+                //  If we reached this point, no queue was awaiting fragments
+                //  so we create a new one
+                var newSubQueue = new WaitingQueue<TextFragment>();
+                var newSubSink = _sinkFactory(++shardCount);
+                var newSubTask = newSubSink.ProcessAsync(newSubQueue, releaseQueue);
+
+                subQueues.Add(newSubQueue);
+                subSinkTasks.Add(newSubTask);
+                //  We finally pass the header and fragment
+                if (header != null)
+                {
+                    newSubQueue.Enqueue(new TextFragment(header, null));
+                }
+                newSubQueue.Enqueue(textFragment);
+
+                return true;
             }
-            newSubQueue.Enqueue(textFragment);
+            else
+            {
+                return false;
+            }
         }
 
         private async void CleanSubSinks(

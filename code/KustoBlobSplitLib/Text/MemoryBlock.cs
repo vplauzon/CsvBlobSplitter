@@ -27,6 +27,7 @@ namespace KustoBlobSplitLib.LineBased
             return new MemoryBlock(Buffer, Offset + index + 1, Length - index - 1);
         }
 
+        #region ICollection<byte> Methods
         bool ICollection<byte>.IsReadOnly => true;
 
         IEnumerator<byte> IEnumerable<byte>.GetEnumerator()
@@ -68,5 +69,6 @@ namespace KustoBlobSplitLib.LineBased
         {
             throw new NotSupportedException();
         }
+        #endregion
     }
 }

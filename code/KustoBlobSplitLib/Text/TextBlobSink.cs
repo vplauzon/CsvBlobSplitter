@@ -59,9 +59,10 @@ namespace KustoBlobSplitLib.LineBased
                     $"{_destinationBlobPrefix}-{_shardIndex}.csv{GetCompressionExtension()}";
                 var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
 
-                using (var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions))
-                using (var compressedStream = CompressedStream(blobStream))
-                using (var countingStream = new ByteCountingStream(compressedStream))
+                await using (var blobStream =
+                    await shardBlobClient.OpenWriteAsync(true, writeOptions))
+                await using (var compressedStream = CompressedStream(blobStream))
+                await using (var countingStream = new ByteCountingStream(compressedStream))
                 {
                     if (headerFragment != null)
                     {

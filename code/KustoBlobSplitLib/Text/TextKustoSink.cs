@@ -1,4 +1,5 @@
-﻿using Kusto.Ingest;
+﻿using Kusto.Data.Common;
+using Kusto.Ingest;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -43,9 +44,35 @@ namespace KustoBlobSplitLib.LineBased
             return stream;
         }
 
-        protected override Task PostWriteAsync()
+        protected override async Task PostWriteAsync()
         {
-            throw new NotImplementedException();
+            var stream = File.OpenRead(_filePath);
+            var properties = new KustoIngestionProperties(_kustoDb, _kustoTable)
+            {
+                Format = DataSourceFormat.txt
+            };
+
+            await _ingestClient.IngestFromStreamAsync(
+                stream,
+                properties,
+                new StreamSourceOptions
+                {
+                    CompressionType = GetCompressionType()
+                });
+        }
+
+        private DataSourceCompressionType GetCompressionType()
+        {
+            switch (Compression)
+            {
+                case BlobCompression.None:
+                    return DataSourceCompressionType.None;
+                case BlobCompression.Gzip:
+                    return DataSourceCompressionType.GZip;
+
+                default:
+                    throw new NotSupportedException($"{Compression}");
+            }
         }
     }
 }

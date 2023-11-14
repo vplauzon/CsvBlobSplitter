@@ -1,3 +1,10 @@
+@description('Ingest Uri of the Kusto Cluster')
+param kustoIngestUri string
+@description('Database to ingest into')
+param kustoDb string
+@description('Table to ingest into')
+param kustoTable string
+
 @description('Location for all resources')
 param location string = resourceGroup().location
 
@@ -255,6 +262,18 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
             {
               name: 'DestinationBlobPrefix'
               value: 'https://${storage.name}.blob.core.windows.net/dev/split/'
+            }
+            {
+              name: 'KustoIngestUri'
+              value: ''
+            }
+            {
+              name: 'KustoDb'
+              value: ''
+            }
+            {
+              name: 'KustoTable'
+              value: ''
             }
             {
               name: 'InputCompression'

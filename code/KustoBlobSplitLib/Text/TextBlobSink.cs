@@ -42,12 +42,10 @@ namespace KustoBlobSplitLib.LineBased
         bool ITextSink.HasHeaders => _hasHeaders;
 
         async Task ITextSink.ProcessAsync(
-            WaitingQueue<TextFragment> fragmentQueue,
-            WaitingQueue<int> releaseQueue)
+            TextFragment? headerFragment,
+            IWaitingQueue<TextFragment> fragmentQueue,
+            IWaitingQueue<int> releaseQueue)
         {
-            var header = _hasHeaders
-                ? await DequeueHeaderAsync(fragmentQueue, releaseQueue)
-                : null;
             var copyBuffer = new byte[0];
             var stopwatch = new Stopwatch();
 
@@ -70,27 +68,19 @@ namespace KustoBlobSplitLib.LineBased
                 using (var compressedStream = CompressedStream(blobStream))
                 using (var countingStream = new ByteCountingStream(compressedStream))
                 {
-                    if (header != null)
+                    if (headerFragment != null)
                     {
-                        await countingStream.WriteAsync(header);
+                        copyBuffer = await WriteFragmentAsync(
+                            copyBuffer,
+                            headerFragment,
+                            countingStream);
                     }
                     do
                     {
-                        if (fragment.FragmentBlock != null)
-                        {
-                            await countingStream.WriteAsync(
-                                fragment.FragmentBlock.Buffer,
-                                fragment.FragmentBlock.Offset,
-                                fragment.FragmentBlock.Count);
-                        }
-                        else
-                        {
-                            copyBuffer = CopyBytes(copyBuffer, fragment.FragmentBytes);
-                            await countingStream.WriteAsync(
-                                copyBuffer,
-                                0,
-                                fragment.FragmentBytes.Count());
-                        }
+                        copyBuffer = await WriteFragmentAsync(
+                            copyBuffer,
+                            fragment,
+                            countingStream);
                         releaseQueue.Enqueue(fragment.FragmentBytes.Count());
                     }
                     while (countingStream.Position < _maxBytesPerShard
@@ -98,6 +88,30 @@ namespace KustoBlobSplitLib.LineBased
                 }
                 Console.WriteLine($"Sealing blob {shardName} ({stopwatch.Elapsed})");
             }
+        }
+
+        private async Task<byte[]> WriteFragmentAsync(
+            byte[] copyBuffer,
+            TextFragment fragment,
+            Stream stream)
+        {
+            if (fragment.FragmentBlock != null)
+            {
+                await stream.WriteAsync(
+                    fragment.FragmentBlock.Buffer,
+                    fragment.FragmentBlock.Offset,
+                    fragment.FragmentBlock.Count);
+            }
+            else
+            {
+                copyBuffer = CopyBytes(copyBuffer, fragment.FragmentBytes);
+                await stream.WriteAsync(
+                    copyBuffer,
+                    0,
+                    fragment.FragmentBytes.Count());
+            }
+
+            return copyBuffer;
         }
 
         private string GetCompressionExtension()
@@ -141,26 +155,6 @@ namespace KustoBlobSplitLib.LineBased
 
                 default:
                     throw new NotSupportedException(_compression.ToString());
-            }
-        }
-
-        private async Task<byte[]?> DequeueHeaderAsync(
-            WaitingQueue<TextFragment> fragmentQueue,
-            WaitingQueue<int> releaseQueue)
-        {
-            var fragmentResult = await fragmentQueue.DequeueAsync();
-
-            if (!fragmentResult.IsCompleted)
-            {
-                var header = fragmentResult.Item!.FragmentBytes.ToArray();
-
-                releaseQueue.Enqueue(header.Length);
-
-                return header;
-            }
-            else
-            {
-                return null;
             }
         }
     }

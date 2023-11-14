@@ -2,6 +2,7 @@
 using Azure.Storage.Blobs.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -14,6 +15,18 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal class TextSplitSink : ITextSink
     {
+        #region Inner types
+        private class ThreadSafeCounter
+        {
+            private volatile int _counter = 0;
+
+            public int GetNextCounter()
+            {
+                return Interlocked.Increment(ref _counter);
+            }
+        }
+        #endregion
+
         private readonly bool _hasHeaders;
         private readonly Func<int, ITextSink> _sinkFactory;
 
@@ -26,134 +39,33 @@ namespace KustoBlobSplitLib.LineBased
         bool ITextSink.HasHeaders => _hasHeaders;
 
         async Task ITextSink.ProcessAsync(
-            WaitingQueue<TextFragment> fragmentQueue,
-            WaitingQueue<int> releaseQueue)
+            TextFragment? headerFragment,
+            IWaitingQueue<TextFragment> fragmentQueue,
+            IWaitingQueue<int> releaseQueue)
         {
-            var header = _hasHeaders
-                ? await DequeueHeaderAsync(fragmentQueue, releaseQueue)
-                : null;
-            var subSinkTasks = new List<Task>();
-            var subQueues = new List<WaitingQueue<TextFragment>>();
-            var shardCount = 0;
+            var counter = new ThreadSafeCounter();
+            var processingTasks = Enumerable.Range(0, 2 * Environment.ProcessorCount)
+                .Select(i => ProcessFragmentsAsync(
+                    counter,
+                    headerFragment,
+                    fragmentQueue,
+                    releaseQueue))
+                .ToImmutableArray();
 
-            while (true)
-            {
-                var fragmentResult = await fragmentQueue.DequeueAsync();
-
-                if (!fragmentResult.IsCompleted)
-                {
-                    var isQueued = false;
-
-                    while (!isQueued)
-                    {
-                        CleanSubSinks(subSinkTasks, subQueues);
-                        isQueued = QueueFragment(
-                            fragmentResult.Item!,
-                            subSinkTasks,
-                            subQueues,
-                            releaseQueue,
-                            header,
-                            ref shardCount);
-                        if (!isQueued)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(0.2));
-                        }
-                    }
-                }
-                else
-                {   //  Signal end to each sub sink
-                    foreach (var subQueue in subQueues)
-                    {
-                        subQueue.Complete();
-                    }
-                    await Task.WhenAll(subSinkTasks);
-                }
-            }
+            await Task.WhenAll(processingTasks);
         }
 
-        private bool QueueFragment(
-            TextFragment textFragment,
-            List<Task> subSinkTasks,
-            List<WaitingQueue<TextFragment>> subQueues,
-            WaitingQueue<int> releaseQueue,
-            byte[]? header,
-            ref int shardCount)
+        private async Task ProcessFragmentsAsync(
+            ThreadSafeCounter counter,
+            TextFragment? headerFragment,
+            IWaitingQueue<TextFragment> fragmentQueue,
+            IWaitingQueue<int> releaseQueue)
         {
-            foreach (var pair in subSinkTasks.Zip(subQueues))
+            while (!fragmentQueue.HasCompleted)
             {
-                var subSinkTask = pair.First;
-                var subQueue = pair.Second;
+                var sink = _sinkFactory(counter.GetNextCounter());
 
-                if (!subSinkTask.IsCompleted && subQueue.IsConsumerWaiting)
-                {
-                    subQueue.Enqueue(textFragment);
-
-                    return true;
-                }
-            }
-            if (subSinkTasks.Count <= 2 * Environment.ProcessorCount)
-            {
-                //  If we reached this point, no queue was awaiting fragments
-                //  so we create a new one
-                var newSubQueue = new WaitingQueue<TextFragment>();
-                var newSubSink = _sinkFactory(++shardCount);
-                var newSubTask = newSubSink.ProcessAsync(newSubQueue, releaseQueue);
-
-                subQueues.Add(newSubQueue);
-                subSinkTasks.Add(newSubTask);
-                //  We finally pass the header and fragment
-                if (header != null)
-                {
-                    newSubQueue.Enqueue(new TextFragment(header, null));
-                }
-                newSubQueue.Enqueue(textFragment);
-
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private async void CleanSubSinks(
-            List<Task> subSinkTasks,
-            List<WaitingQueue<TextFragment>> subQueues)
-        {
-            var indexToRemove = new List<int>();
-
-            for (int i = 0; i != subSinkTasks.Count; ++i)
-            {
-                if (subSinkTasks[i].IsCompleted)
-                {   //  Observe task ending
-                    await subSinkTasks[i];
-                    indexToRemove.Add(i);
-                }
-            }
-            foreach (var i in indexToRemove.Reverse<int>())
-            {
-                subSinkTasks.RemoveAt(i);
-                subQueues.RemoveAt(i);
-            }
-        }
-
-        private async Task<byte[]?> DequeueHeaderAsync(
-            WaitingQueue<TextFragment> fragmentQueue,
-            WaitingQueue<int> releaseQueue)
-        {
-            var fragmentResult = await fragmentQueue.DequeueAsync();
-
-            if (!fragmentResult.IsCompleted)
-            {
-                var header = fragmentResult.Item!.FragmentBytes.ToArray();
-
-                releaseQueue.Enqueue(header.Length);
-
-                return header;
-            }
-            else
-            {
-                return null;
+                await sink.ProcessAsync(headerFragment, fragmentQueue, releaseQueue);
             }
         }
     }

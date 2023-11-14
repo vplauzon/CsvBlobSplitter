@@ -8,22 +8,17 @@ using System.Threading.Tasks;
 
 namespace KustoBlobSplitLib
 {
-    internal class WaitingQueue<T>
+    internal partial class WaitingQueue<T> : IWaitingQueue<T>
     {
-        #region Inner Types
-        public record QueueResult(bool IsCompleted, T? Item);
-        #endregion
-
         private readonly ConcurrentQueue<T> _queue = new();
         private readonly TaskCompletionSource _isCompletedSource = new();
         private volatile TaskCompletionSource _newItemSource = new();
-        private volatile int _consumerWaiting = 0;
 
-        public bool HasData => _queue.Any();
+        bool IWaitingQueue<T>.HasData => _queue.Any();
 
-        public bool IsConsumerWaiting => _consumerWaiting != 0;
+        bool IWaitingQueue<T>.HasCompleted => _isCompletedSource.Task.IsCompleted;
 
-        public void Enqueue(T item)
+        void IWaitingQueue<T>.Enqueue(T item)
         {
             var oldSource = Interlocked.Exchange(
                 ref _newItemSource,
@@ -33,37 +28,28 @@ namespace KustoBlobSplitLib
             oldSource.SetResult();
         }
 
-        public async ValueTask<QueueResult> DequeueAsync()
+        async ValueTask<QueueResult<T>> IWaitingQueue<T>.DequeueAsync()
         {
-            Interlocked.Increment(ref _consumerWaiting);
+            var newItemTask = _newItemSource.Task;
 
-            try
+            if (_queue.TryDequeue(out var result))
             {
-                var newItemTask = _newItemSource.Task;
-
-                if (_queue.TryDequeue(out var result))
-                {
-                    return new QueueResult(false, result);
-                }
-                else if (_isCompletedSource.Task.IsCompleted && !_queue.Any())
-                {
-                    return new QueueResult(true, default(T));
-                }
-                else
-                {
-                    await Task.WhenAny(newItemTask, _isCompletedSource.Task);
-
-                    //  Recurse to actually dequeue the value
-                    return await DequeueAsync();
-                }
+                return new QueueResult<T>(false, result);
             }
-            finally
+            else if (_isCompletedSource.Task.IsCompleted && !_queue.Any())
             {
-                Interlocked.Decrement(ref _consumerWaiting);
+                return new QueueResult<T>(true, default(T));
+            }
+            else
+            {
+                await Task.WhenAny(newItemTask, _isCompletedSource.Task);
+
+                //  Recurse to actually dequeue the value
+                return await ((IWaitingQueue<T>)this).DequeueAsync();
             }
         }
 
-        public void Complete()
+        void IWaitingQueue<T>.Complete()
         {
             _isCompletedSource.SetResult();
         }

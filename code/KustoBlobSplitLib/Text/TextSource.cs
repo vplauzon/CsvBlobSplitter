@@ -44,9 +44,10 @@ namespace KustoBlobSplitLib.LineBased
             var buffer = new byte[BUFFER_SIZE];
             var bufferAvailable = BUFFER_SIZE;
             var readingIndex = 0;
-            var fragmentQueue = new WaitingQueue<TextFragment>();
-            var releaseQueue = new WaitingQueue<int>();
+            var fragmentQueue = new WaitingQueue<TextFragment>() as IWaitingQueue<TextFragment>;
+            var releaseQueue = new WaitingQueue<int>() as IWaitingQueue<int>;
             var sinkTask = Task.Run(() => _sink.ProcessAsync(
+                null,
                 fragmentQueue,
                 releaseQueue));
 

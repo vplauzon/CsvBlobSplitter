@@ -11,7 +11,8 @@ namespace KustoBlobSplitLib.LineBased
         bool HasHeaders { get; }
 
         Task ProcessAsync(
-            WaitingQueue<TextFragment> fragmentQueue,
-            WaitingQueue<int> releaseQueue);
+            TextFragment? headerFragment,
+            IWaitingQueue<TextFragment> fragmentQueue,
+            IWaitingQueue<int> releaseQueue);
     }
 }

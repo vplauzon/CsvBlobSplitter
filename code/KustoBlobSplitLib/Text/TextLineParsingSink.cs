@@ -22,13 +22,21 @@ namespace KustoBlobSplitLib.Text
         bool ITextSink.HasHeaders => _nextSink.HasHeaders;
 
         async Task ITextSink.ProcessAsync(
-            WaitingQueue<TextFragment> inputFragmentQueue,
-            WaitingQueue<int> releaseQueue)
+            TextFragment? headerFragment,
+            IWaitingQueue<TextFragment> inputFragmentQueue,
+            IWaitingQueue<int> releaseQueue)
         {
-            var isFirstLine = true;
-            var outputFragmentQueue = new WaitingQueue<TextFragment>();
+            if (headerFragment != null)
+            {
+                throw new ArgumentOutOfRangeException(nameof(headerFragment));
+            }
+
+            var outputFragmentQueue =
+                new WaitingQueue<TextFragment>() as IWaitingQueue<TextFragment>;
             var outputFragmentBytes = (IEnumerable<byte>?)null;
-            var sinkTask = _nextSink.ProcessAsync(outputFragmentQueue, releaseQueue);
+            var sinkTask = _nextSink.HasHeaders
+                ? null
+                : _nextSink.ProcessAsync(null, outputFragmentQueue, releaseQueue);
 
             while (true)
             {
@@ -41,7 +49,10 @@ namespace KustoBlobSplitLib.Text
                         PushFragment(outputFragmentQueue, outputFragmentBytes);
                     }
                     outputFragmentQueue.Complete();
-                    await sinkTask;
+                    if (sinkTask != null)
+                    {
+                        await sinkTask;
+                    }
 
                     return;
                 }
@@ -62,17 +73,24 @@ namespace KustoBlobSplitLib.Text
                         if (b == '\n')
                         {
                             if (i + (outputFragmentBytes?.Count() ?? 0) > SINK_BUFFER_SIZE
-                                || (isFirstLine && _nextSink.HasHeaders))
+                                || sinkTask == null)
                             {
-                                PushFragment(
-                                    outputFragmentQueue,
-                                    MergeFragments(
-                                        outputFragmentBytes,
-                                        fragmentBlock
-                                        .SpliceBefore(i)
-                                        .SpliceAfter(lastPushIndex)));
+                                var fragment = MergeFragments(
+                                    outputFragmentBytes,
+                                    fragmentBlock
+                                    .SpliceBefore(i)
+                                    .SpliceAfter(lastPushIndex));
+
+                                if (sinkTask == null)
+                                {
+                                    //  Init sink task with header
+                                    sinkTask = _nextSink.ProcessAsync(
+                                        null,
+                                        outputFragmentQueue,
+                                        releaseQueue);
+                                }
+                                PushFragment(outputFragmentQueue, fragment);
                                 outputFragmentBytes = null;
-                                isFirstLine = false;
                                 lastPushIndex = i;
                             }
                         }
@@ -89,7 +107,7 @@ namespace KustoBlobSplitLib.Text
         }
 
         private void PushFragment(
-            WaitingQueue<TextFragment> outputFragmentQueue,
+            IWaitingQueue<TextFragment> outputFragmentQueue,
             IEnumerable<byte> outputFragmentBytes)
         {
             var fragment = outputFragmentBytes is MemoryBlock block

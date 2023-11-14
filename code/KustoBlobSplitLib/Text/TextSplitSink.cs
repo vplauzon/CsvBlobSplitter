@@ -1,13 +1,8 @@
-﻿using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -40,7 +35,7 @@ namespace KustoBlobSplitLib.LineBased
             IWaitingQueue<int> releaseQueue)
         {
             var counter = new ThreadSafeCounter();
-            var processingTasks = Enumerable.Range(0, 2 * Environment.ProcessorCount)
+            var processingTasks = Enumerable.Range(0, 2 * Environment.ProcessorCount + 1)
                 .Select(i => ProcessFragmentsAsync(
                     counter,
                     headerFragment,

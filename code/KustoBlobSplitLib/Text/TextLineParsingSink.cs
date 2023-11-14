@@ -10,7 +10,7 @@ namespace KustoBlobSplitLib.Text
 {
     internal class TextLineParsingSink : ITextSink
     {
-        private const int SINK_BUFFER_SIZE = 1024 * 1024;
+        private const int MIN_SINK_BUFFER_SIZE = 1024 * 1024;
 
         private readonly ITextSink _nextSink;
         private readonly bool _propagateHeader;
@@ -69,7 +69,7 @@ namespace KustoBlobSplitLib.Text
                     {
                         if (b == '\n')
                         {
-                            if (i + outputFragment.Count() > SINK_BUFFER_SIZE
+                            if (i + outputFragment.Count() > MIN_SINK_BUFFER_SIZE
                                 || sinkTask == null)
                             {
                                 outputFragment = outputFragment.Merge(fragmentBlock

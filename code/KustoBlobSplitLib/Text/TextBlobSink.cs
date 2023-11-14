@@ -12,15 +12,12 @@ using System.Threading.Tasks;
 
 namespace KustoBlobSplitLib.LineBased
 {
-    internal class TextBlobSink : ITextSink
+    internal class TextBlobSink : TextStreamSinkBase
     {
         private const int WRITING_BUFFER_SIZE = 20 * 1024 * 1024;
 
         private readonly BlobContainerClient _destinationBlobContainer;
         private readonly string _destinationBlobPrefix;
-        private readonly BlobCompression _compression;
-        private readonly long _maxBytesPerShard;
-        private readonly int _shardIndex;
 
         public TextBlobSink(
             BlobContainerClient destinationBlobContainer,
@@ -28,91 +25,36 @@ namespace KustoBlobSplitLib.LineBased
             BlobCompression compression,
             int maxMbPerShard,
             int shardIndex)
+            : base(compression, maxMbPerShard, shardIndex)
         {
             _destinationBlobContainer = destinationBlobContainer;
             _destinationBlobPrefix = destinationBlobPrefix;
-            _compression = compression;
-            _maxBytesPerShard = ((long)maxMbPerShard) * 1024 * 1024;
-            _shardIndex = shardIndex;
         }
 
-        async Task ITextSink.ProcessAsync(
-            TextFragment? headerFragment,
-            IWaitingQueue<TextFragment> fragmentQueue,
-            IWaitingQueue<int> releaseQueue)
+        protected override async Task<Stream> CreateOutputStreamAsync()
         {
-            var copyBuffer = new byte[0];
-            var stopwatch = new Stopwatch();
-
-            stopwatch.Start();
-            //  We pre-fetch a fragment not to create an empty blob
-            var fragmentResult = await fragmentQueue.DequeueAsync();
-
-            if (!fragmentResult.IsCompleted)
+            var writeOptions = new BlobOpenWriteOptions
             {
-                var fragment = fragmentResult.Item!;
-                var writeOptions = new BlobOpenWriteOptions
-                {
-                    BufferSize = WRITING_BUFFER_SIZE
-                };
-                var shardName =
-                    $"{_destinationBlobPrefix}-{_shardIndex}.csv{GetCompressionExtension()}";
-                var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
+                BufferSize = WRITING_BUFFER_SIZE
+            };
+            var shardName =
+                $"{_destinationBlobPrefix}-{ShardIndex}.csv{GetCompressionExtension()}";
+            var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
+            var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions);
 
-                await using (var blobStream =
-                    await shardBlobClient.OpenWriteAsync(true, writeOptions))
-                await using (var compressedStream = CompressedStream(blobStream))
-                await using (var countingStream = new ByteCountingStream(compressedStream))
-                {
-                    if (headerFragment != null)
-                    {
-                        copyBuffer = await WriteFragmentAsync(
-                            copyBuffer,
-                            headerFragment,
-                            countingStream);
-                    }
-                    do
-                    {
-                        copyBuffer = await WriteFragmentAsync(
-                            copyBuffer,
-                            fragment,
-                            countingStream);
-                        releaseQueue.Enqueue(fragment.Count());
-                    }
-                    while (countingStream.Position < _maxBytesPerShard
-                    && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);
-                }
-                Console.WriteLine($"Sealing blob {shardName} ({stopwatch.Elapsed})");
-            }
+            return blobStream;
         }
 
-        private async Task<byte[]> WriteFragmentAsync(
-            byte[] copyBuffer,
-            TextFragment fragment,
-            Stream stream)
+        protected override Task PostWriteAsync()
         {
-            if (fragment.FragmentBlock != null)
-            {
-                await stream.WriteAsync(
-                    fragment.FragmentBlock.Buffer,
-                    fragment.FragmentBlock.Offset,
-                    fragment.FragmentBlock.Count);
-            }
-            else
-            {
-                copyBuffer = CopyBytes(copyBuffer, fragment.FragmentBytes);
-                await stream.WriteAsync(
-                    copyBuffer,
-                    0,
-                    fragment.FragmentBytes.Count());
-            }
+            //   Do nothing as we write to blob directly
 
-            return copyBuffer;
+            return Task.CompletedTask;
         }
 
         private string GetCompressionExtension()
         {
-            switch (_compression)
+            switch (Compression)
             {
                 case BlobCompression.None:
                     return string.Empty;
@@ -120,37 +62,7 @@ namespace KustoBlobSplitLib.LineBased
                     return ".gz";
 
                 default:
-                    throw new NotSupportedException(_compression.ToString());
-            }
-        }
-
-        private byte[] CopyBytes(byte[] copyBuffer, IEnumerable<byte> fragmentBytes)
-        {
-            var i = 0;
-
-            if (copyBuffer.Length < fragmentBytes.Count())
-            {
-                copyBuffer = new byte[fragmentBytes.Count()];
-            }
-            foreach (var b in fragmentBytes)
-            {
-                copyBuffer[i++] = b;
-            }
-
-            return copyBuffer;
-        }
-
-        private Stream CompressedStream(Stream stream)
-        {
-            switch (_compression)
-            {
-                case BlobCompression.None:
-                    return stream;
-                case BlobCompression.Gzip:
-                    return new GZipStream(stream, CompressionMode.Compress);
-
-                default:
-                    throw new NotSupportedException(_compression.ToString());
+                    throw new NotSupportedException(Compression.ToString());
             }
         }
     }

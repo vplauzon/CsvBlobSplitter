@@ -38,7 +38,7 @@ namespace KustoBlobSplitLib.LineBased
                 BufferSize = WRITING_BUFFER_SIZE
             };
             var shardName =
-                $"{_destinationBlobPrefix}-{ShardIndex}.csv{GetCompressionExtension()}";
+                $"{_destinationBlobPrefix}-{ShardIndex}.txt{GetCompressionExtension()}";
             var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
             var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions);
 

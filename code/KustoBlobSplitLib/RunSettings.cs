@@ -9,7 +9,7 @@ namespace KustoBlobSplitLib
     public class RunSettings
     {
         public AuthMode AuthMode { get; }
-        
+
         public string? ServiceBusQueueUrl { get; }
 
         public string? ManagedIdentityResourceId { get; }
@@ -19,8 +19,12 @@ namespace KustoBlobSplitLib
         public Uri SourceBlob { get; }
 
         public Uri? DestinationBlobPrefix { get; }
-        
+
         public Uri? KustoIngestUri { get; }
+
+        public string? KustoDb { get; }
+
+        public string? KustoTable { get; }
 
         public BlobCompression InputCompression { get; }
 
@@ -40,6 +44,8 @@ namespace KustoBlobSplitLib
             var sourceBlob = GetUri("SourceBlob");
             var destinationBlobPrefix = GetUri("DestinationBlobPrefix", false);
             var kustoIngestUri = GetUri("KustoIngestUri", false);
+            var kustoDb = GetString("KustoDb", false);
+            var kustoTable = GetString("KustoTable", false);
             var inputCompression = GetEnum<BlobCompression>("InputCompression", false);
             var outputCompression = GetEnum<BlobCompression>("OutputCompression", false);
             var hasHeaders = GetBool("CsvHeaders", false);
@@ -53,6 +59,8 @@ namespace KustoBlobSplitLib
                 sourceBlob,
                 destinationBlobPrefix,
                 kustoIngestUri,
+                kustoDb,
+                kustoTable,
                 inputCompression,
                 outputCompression,
                 hasHeaders,
@@ -67,14 +75,22 @@ namespace KustoBlobSplitLib
             Uri sourceBlob,
             Uri? destinationBlobPrefix,
             Uri? kustoIngestUri,
+            string? kustoDb,
+            string? kustoTable,
             BlobCompression? inputCompression,
             BlobCompression? outputCompression,
             bool? hasHeaders,
             int? maxMbPerShard)
         {
-            if (destinationBlobPrefix == null)
+            if (kustoIngestUri != null && (kustoDb == null || kustoTable == null))
             {
-                throw new NotSupportedException("No destination specified");
+                throw new ArgumentNullException(nameof(kustoDb));
+            }
+            else if (destinationBlobPrefix == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(destinationBlobPrefix),
+                    "No destination specified");
             }
             if (AuthMode == AuthMode.ManagedIdentity
                 && string.IsNullOrWhiteSpace(managedIdentityResourceId))
@@ -89,6 +105,8 @@ namespace KustoBlobSplitLib
             SourceBlob = sourceBlob;
             DestinationBlobPrefix = destinationBlobPrefix;
             KustoIngestUri = kustoIngestUri;
+            KustoDb = kustoDb;
+            KustoTable = kustoTable;
             InputCompression = inputCompression ?? BlobCompression.None;
             OutputCompression = outputCompression ?? BlobCompression.None;
             HasHeaders = hasHeaders ?? true;
@@ -254,6 +272,8 @@ namespace KustoBlobSplitLib
                 sourceBlobUri,
                 destinationBlobPrefix,
                 KustoIngestUri,
+                KustoDb,
+                KustoTable,
                 InputCompression,
                 OutputCompression,
                 HasHeaders,

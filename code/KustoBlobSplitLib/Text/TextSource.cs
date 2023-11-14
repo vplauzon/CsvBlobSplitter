@@ -81,22 +81,19 @@ namespace KustoBlobSplitLib.LineBased
                             readingIndex = (readingIndex + readLength) % BUFFER_SIZE;
                         }
                     }
-                    else
+                    while (releaseQueue.HasData || bufferAvailable < MIN_STORAGE_FETCH)
                     {
-                        while (releaseQueue.HasData || bufferAvailable < MIN_STORAGE_FETCH)
-                        {
-                            var returnLengthResult = await releaseQueue.DequeueAsync();
+                        var returnLengthResult = await releaseQueue.DequeueAsync();
 
-                            if (returnLengthResult.IsCompleted)
-                            {
-                                throw new NotSupportedException(
-                                    "releaseQueue should never be observed as completed");
-                            }
-                            bufferAvailable += returnLengthResult.Item;
-                            if (bufferAvailable > BUFFER_SIZE)
-                            {
-                                throw new InvalidDataException("Buffer invalid");
-                            }
+                        if (returnLengthResult.IsCompleted)
+                        {
+                            throw new NotSupportedException(
+                                "releaseQueue should never be observed as completed");
+                        }
+                        bufferAvailable += returnLengthResult.Item;
+                        if (bufferAvailable > BUFFER_SIZE)
+                        {
+                            throw new InvalidDataException("Buffer invalid");
                         }
                     }
                 }

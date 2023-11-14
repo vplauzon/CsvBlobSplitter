@@ -9,6 +9,8 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal record MemoryBlock(byte[] Buffer, int Offset, int Length) : ICollection<byte>
     {
+        public static MemoryBlock Empty { get; } = new MemoryBlock(new byte[0], 0, 0);
+
         public int Count => Length;
 
         /// <summary>This includes the specified index and everything before.</summary>

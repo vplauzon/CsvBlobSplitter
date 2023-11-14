@@ -33,7 +33,9 @@ namespace KustoBlobSplitLib.Text
 
             var outputFragmentQueue =
                 new WaitingQueue<TextFragment>() as IWaitingQueue<TextFragment>;
-            var outputFragment = TextFragment.Empty;
+            var remainingFragment = TextFragment.Empty;
+            //  Keep track of #bytes remaining to write before pushing
+            var bytesToWrite = MIN_SINK_BUFFER_SIZE;
             var sinkTask = _propagateHeader
                 ? null
                 : _nextSink.ProcessAsync(null, outputFragmentQueue, releaseQueue);
@@ -45,7 +47,7 @@ namespace KustoBlobSplitLib.Text
                 if (inputResult.IsCompleted)
                 {
                     //  Push what is left (in case no \n at the end of line)
-                    PushFragment(outputFragmentQueue, outputFragment);
+                    PushFragment(outputFragmentQueue, remainingFragment);
                     outputFragmentQueue.Complete();
                     if (sinkTask != null)
                     {
@@ -69,13 +71,13 @@ namespace KustoBlobSplitLib.Text
                     {
                         if (b == '\n')
                         {
-                            if (i + outputFragment.Count() > MIN_SINK_BUFFER_SIZE
-                                || sinkTask == null)
+                            if (bytesToWrite <= 0 || sinkTask == null)
                             {
-                                outputFragment = outputFragment.Merge(fragmentBlock
+                                var outputFragment = remainingFragment.Merge(fragmentBlock
                                     .SpliceBefore(i)
                                     .SpliceAfter(lastPushedIndex)
                                     .ToTextFragment());
+
                                 if (sinkTask == null)
                                 {
                                     //  Init sink task with header
@@ -83,21 +85,24 @@ namespace KustoBlobSplitLib.Text
                                         outputFragment.FragmentBytes.ToArray().ToTextFragment(),
                                         outputFragmentQueue,
                                         releaseQueue);
+                                    //  We release the bytes immediately as they are kept in memory
                                     releaseQueue.Enqueue(outputFragment.Count());
                                 }
                                 else
                                 {
                                     PushFragment(outputFragmentQueue, outputFragment);
                                 }
-                                outputFragment = TextFragment.Empty;
+                                remainingFragment = TextFragment.Empty;
                                 lastPushedIndex = i;
+                                bytesToWrite = MIN_SINK_BUFFER_SIZE;
                             }
                         }
                         ++i;
+                        --bytesToWrite;
                     }
                     if (lastPushedIndex < fragmentBlock.Count() - 1)
                     {   //  Keep fragment
-                        outputFragment = outputFragment.Merge(
+                        remainingFragment = remainingFragment.Merge(
                             fragmentBlock.SpliceAfter(lastPushedIndex).ToTextFragment());
                     }
                 }

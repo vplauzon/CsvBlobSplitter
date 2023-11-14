@@ -265,15 +265,15 @@ resource app 'Microsoft.App/containerApps@2022-10-01' = {
             }
             {
               name: 'KustoIngestUri'
-              value: ''
+              value: kustoIngestUri
             }
             {
               name: 'KustoDb'
-              value: ''
+              value: kustoDb
             }
             {
               name: 'KustoTable'
-              value: ''
+              value: kustoTable
             }
             {
               name: 'InputCompression'

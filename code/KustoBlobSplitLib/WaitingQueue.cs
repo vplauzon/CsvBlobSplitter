@@ -17,8 +17,11 @@ namespace KustoBlobSplitLib
         private readonly ConcurrentQueue<T> _queue = new();
         private readonly TaskCompletionSource _isCompletedSource = new();
         private volatile TaskCompletionSource _newItemSource = new();
+        private volatile int _consumerWaiting = 0;
 
         public bool HasData => _queue.Any();
+
+        public bool IsConsumerWaiting => _consumerWaiting != 0;
 
         public void Enqueue(T item)
         {
@@ -32,22 +35,31 @@ namespace KustoBlobSplitLib
 
         public async ValueTask<QueueResult> DequeueAsync()
         {
-            var newItemTask = _newItemSource.Task;
+            Interlocked.Increment(ref _consumerWaiting);
 
-            if (_queue.TryDequeue(out var result))
+            try
             {
-                return new QueueResult(false, result);
-            }
-            else if (_isCompletedSource.Task.IsCompleted && !_queue.Any())
-            {
-                return new QueueResult(true, default(T));
-            }
-            else
-            {
-                await Task.WhenAny(newItemTask, _isCompletedSource.Task);
+                var newItemTask = _newItemSource.Task;
 
-                //  Recurse to actually dequeue the value
-                return await DequeueAsync();
+                if (_queue.TryDequeue(out var result))
+                {
+                    return new QueueResult(false, result);
+                }
+                else if (_isCompletedSource.Task.IsCompleted && !_queue.Any())
+                {
+                    return new QueueResult(true, default(T));
+                }
+                else
+                {
+                    await Task.WhenAny(newItemTask, _isCompletedSource.Task);
+
+                    //  Recurse to actually dequeue the value
+                    return await DequeueAsync();
+                }
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _consumerWaiting);
             }
         }
 

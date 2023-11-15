@@ -83,7 +83,9 @@ namespace KustoBlobSplitLib.LineBased
                     }
                     while (releaseQueue.HasData || bufferAvailable < MIN_STORAGE_FETCH)
                     {
-                        var returnLengthResult = await releaseQueue.DequeueAsync();
+                        var returnLengthResult = await TaskHelper.AwaitAsync(
+                            releaseQueue.DequeueAsync(),
+                            sinkTask);
 
                         if (returnLengthResult.IsCompleted)
                         {

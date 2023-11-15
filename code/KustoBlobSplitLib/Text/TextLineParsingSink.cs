@@ -42,7 +42,9 @@ namespace KustoBlobSplitLib.Text
 
             while (true)
             {
-                var inputResult = await inputFragmentQueue.DequeueAsync();
+                var inputResult = await TaskHelper.AwaitAsync(
+                    inputFragmentQueue.DequeueAsync(),
+                    sinkTask);
 
                 if (inputResult.IsCompleted)
                 {

@@ -19,7 +19,7 @@ namespace KustoBlobSplitLib
 {
     public class RunningContext
     {
-        private readonly Func<KustoIngestionProperties>? _ingestionPropertiesFactory;
+        private readonly Func<KustoQueuedIngestionProperties>? _ingestionPropertiesFactory;
         private readonly IImmutableList<BlobContainerClient> _ingestionStagingContainers;
         private volatile int _ingestionStagingContainerIndex = 0;
 
@@ -39,11 +39,11 @@ namespace KustoBlobSplitLib
                     .WithAadAzureTokenCredentialsAuthentication(credentials))
                 : null;
             var ingestionPropertiesFactory = runSettings.KustoIngestUri != null
-                ? () => new KustoIngestionProperties(runSettings.KustoDb!, runSettings.KustoTable!)
+                ? () => new KustoQueuedIngestionProperties(runSettings.KustoDb!, runSettings.KustoTable!)
                 {
                     Format = runSettings.BlobSettings.Format
                 }
-                : (Func<KustoIngestionProperties>?)null;
+                : (Func<KustoQueuedIngestionProperties>?)null;
             var kustoAdminClient = runSettings.KustoIngestUri != null
                 ? KustoClientFactory.CreateCslAdminProvider(
                     new KustoConnectionStringBuilder(
@@ -72,7 +72,7 @@ namespace KustoBlobSplitLib
             BlockBlobClient sourceBlobClient,
             BlockBlobClient? destinationBlobClient,
             IKustoQueuedIngestClient? ingestClient,
-            Func<KustoIngestionProperties>? ingestionPropertiesFactory,
+            Func<KustoQueuedIngestionProperties>? ingestionPropertiesFactory,
             IImmutableList<BlobContainerClient> ingestionStagingContainers)
         {
             BlobSettings = blobSettings;
@@ -127,7 +127,7 @@ namespace KustoBlobSplitLib
 
         public IKustoQueuedIngestClient? IngestClient { get; }
 
-        public KustoIngestionProperties CreateIngestionProperties()
+        public KustoQueuedIngestionProperties CreateIngestionProperties()
         {
             if (_ingestionPropertiesFactory == null)
             {

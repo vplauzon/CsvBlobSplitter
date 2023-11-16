@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -75,6 +76,32 @@ namespace KustoBlobSplitLib.Text
 
                 return new BufferFragment(_buffer, left._offset, left.Length + right.Length);
             }
+        }
+
+        public (BufferFragment, IImmutableList<BufferFragment>) TryMerge(
+            IEnumerable<BufferFragment> others)
+        {
+            var sortedOthers = others
+                .OrderBy(f => f._offset < _offset ? f._offset + _buffer.Length : f._offset);
+            var stack = new Stack<BufferFragment>(sortedOthers);
+            var mergedFragment = this;
+
+            while (stack.Any())
+            {
+                var other = stack.Peek();
+
+                if (mergedFragment._offset + mergedFragment.Length == other._offset)
+                {
+                    mergedFragment = mergedFragment.Merge(other);
+                    stack.Pop();
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return (mergedFragment, stack.ToImmutableArray());
         }
         #endregion
 

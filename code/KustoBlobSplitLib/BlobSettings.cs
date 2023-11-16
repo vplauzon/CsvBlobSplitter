@@ -18,7 +18,7 @@ namespace KustoBlobSplitLib
 
         public bool HasHeaders { get; }
 
-        public int MaxMbPerShard { get; }
+        public int MaxBytesPerShard { get; }
         #endregion
 
         public BlobSettings(
@@ -32,7 +32,7 @@ namespace KustoBlobSplitLib
             InputCompression = inputCompression ?? DataSourceCompressionType.None;
             OutputCompression = outputCompression ?? DataSourceCompressionType.None;
             HasHeaders = hasHeaders ?? true;
-            MaxMbPerShard = maxMbPerShard ?? 200;
+            MaxBytesPerShard = (maxMbPerShard ?? 200) * 1024 * 1024;
         }
 
         public void WriteOutSettings()
@@ -41,7 +41,7 @@ namespace KustoBlobSplitLib
             Console.WriteLine($"Compression:  {InputCompression}");
             Console.WriteLine($"Compression:  {OutputCompression}");
             Console.WriteLine($"HasHeaders:  {HasHeaders}");
-            Console.WriteLine($"MaxMbPerShard:  {MaxMbPerShard}");
+            Console.WriteLine($"MaxMbPerShard:  {MaxBytesPerShard}");
         }
     }
 }

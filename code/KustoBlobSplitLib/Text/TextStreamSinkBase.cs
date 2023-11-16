@@ -59,7 +59,7 @@ namespace KustoBlobSplitLib.LineBased
                             countingStream);
                         releaseQueue.Enqueue(fragment.Count());
                     }
-                    while (countingStream.Position < Context.BlobSettings.MaxMbPerShard
+                    while (countingStream.Position < Context.BlobSettings.MaxBytesPerShard
                     && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);
                 }
                 await PostWriteAsync();

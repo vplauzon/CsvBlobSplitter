@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Kusto.Data.Common;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Compression;
@@ -11,19 +12,15 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal abstract class TextStreamSinkBase : ITextSink
     {
-        private readonly long _maxBytesPerShard;
+        protected const int WRITING_BUFFER_SIZE = 20 * 1024 * 1024;
 
-        public TextStreamSinkBase(
-            BlobCompression compression,
-            int maxMbPerShard,
-            int shardIndex)
+        public TextStreamSinkBase(RunningContext context, int shardIndex)
         {
-            Compression = compression;
-            _maxBytesPerShard = ((long)maxMbPerShard) * 1024 * 1024;
+            Context = context;
             ShardIndex = shardIndex;
         }
 
-        protected BlobCompression Compression { get; }
+        protected RunningContext Context { get; }
 
         protected int ShardIndex { get; }
 
@@ -62,7 +59,7 @@ namespace KustoBlobSplitLib.LineBased
                             countingStream);
                         releaseQueue.Enqueue(fragment.Count());
                     }
-                    while (countingStream.Position < _maxBytesPerShard
+                    while (countingStream.Position < Context.BlobSettings.MaxMbPerShard
                     && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);
                 }
                 await PostWriteAsync();
@@ -73,6 +70,21 @@ namespace KustoBlobSplitLib.LineBased
         protected abstract Task<Stream> CreateOutputStreamAsync();
         
         protected abstract Task PostWriteAsync();
+
+        protected string GetCompressionExtension()
+        {
+            switch (Context.BlobSettings.OutputCompression)
+            {
+                case DataSourceCompressionType.None:
+                    return string.Empty;
+                case DataSourceCompressionType.GZip:
+                    return ".gz";
+
+                default:
+                    throw new NotSupportedException(
+                        Context.BlobSettings.OutputCompression.ToString());
+            }
+        }
 
         private async Task<byte[]> WriteFragmentAsync(
             byte[] copyBuffer,
@@ -116,15 +128,16 @@ namespace KustoBlobSplitLib.LineBased
 
         private Stream CompressedStream(Stream stream)
         {
-            switch (Compression)
+            switch (Context.BlobSettings.OutputCompression)
             {
-                case BlobCompression.None:
+                case DataSourceCompressionType.None:
                     return stream;
-                case BlobCompression.Gzip:
+                case DataSourceCompressionType.GZip:
                     return new GZipStream(stream, CompressionMode.Compress);
 
                 default:
-                    throw new NotSupportedException(Compression.ToString());
+                    throw new NotSupportedException(
+                        Context.BlobSettings.OutputCompression.ToString());
             }
         }
     }

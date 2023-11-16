@@ -1,10 +1,10 @@
-﻿using Kusto.Data.Common;
+﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using Kusto.Ingest;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Text;
@@ -14,71 +14,57 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal class TextKustoSink : TextStreamSinkBase
     {
-        private readonly IKustoQueuedIngestClient _ingestClient;
-        private readonly string _kustoDb;
-        private readonly string _kustoTable;
-        private readonly Uri _sourceUri;
-        private readonly string _filePath;
+        private readonly string _blobNamePrefix;
 
         public TextKustoSink(
-            IKustoQueuedIngestClient ingestClient,
-            string kustoDb,
-            string kustoTable,
-            string localTempFolder,
-            Uri sourceUri,
-            BlobCompression compression,
-            int maxMbPerShard,
-            int shardIndex)
-            : base(compression, maxMbPerShard, shardIndex)
+            RunningContext context,
+            int shardIndex,
+            string blobNamePrefix)
+            : base(context, shardIndex)
         {
-            _ingestClient = ingestClient;
-            _kustoDb = kustoDb;
-            _kustoTable = kustoTable;
-            _sourceUri = sourceUri;
-            _filePath = Path.Combine(localTempFolder, $"{ShardIndex}.txt");
+            _blobNamePrefix = blobNamePrefix;
         }
 
         protected override async Task<Stream> CreateOutputStreamAsync()
         {
-            await Task.CompletedTask;
+            var writeOptions = new BlobOpenWriteOptions
+            {
+                BufferSize = WRITING_BUFFER_SIZE
+            };
 
-            var stream = File.OpenWrite(_filePath);
+            var shardBlobClient = GetShardBlobClient();
+            var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions);
 
-            return stream;
+            return blobStream;
         }
 
         protected override async Task PostWriteAsync()
         {
-            var stream = File.OpenRead(_filePath);
-            var tagValue = $"{_sourceUri}-{ShardIndex}";
-            var properties = new KustoIngestionProperties(_kustoDb, _kustoTable)
-            {
-                Format = DataSourceFormat.txt,
-                IngestByTags = new[] { tagValue },
-                IngestIfNotExists = new[] { tagValue }
-            };
+            var shardBlobClient = GetShardBlobClient();
+            var properties = Context.CreateIngestionProperties();
+            var tagValue = $"{Context.SourceBlobClient.Uri}-{ShardIndex}";
 
-            await _ingestClient.IngestFromStreamAsync(
-                stream,
+            properties.IngestByTags = new[] { tagValue };
+            properties.IngestIfNotExists = new[] { tagValue };
+
+            await Context.IngestClient!.IngestFromStorageAsync(
+                shardBlobClient.Uri.ToString(),
                 properties,
-                new StreamSourceOptions
+                new StorageSourceOptions
                 {
-                    CompressionType = GetCompressionType()
+                    CompressionType = Context.BlobSettings.OutputCompression
                 });
         }
 
-        private DataSourceCompressionType GetCompressionType()
+        private BlobClient GetShardBlobClient()
         {
-            switch (Compression)
-            {
-                case BlobCompression.None:
-                    return DataSourceCompressionType.None;
-                case BlobCompression.Gzip:
-                    return DataSourceCompressionType.GZip;
+            var shardName =
+                $"{_blobNamePrefix}-{ShardIndex}.txt{GetCompressionExtension()}";
+            var shardBlobClient = Context
+                .RoundRobinIngestStagingContainer()
+                .GetBlobClient(shardName);
 
-                default:
-                    throw new NotSupportedException($"{Compression}");
-            }
+            return shardBlobClient;
         }
     }
 }

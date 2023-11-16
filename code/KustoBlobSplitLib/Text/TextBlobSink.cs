@@ -1,5 +1,7 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
+using Kusto.Data.Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,21 +16,9 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal class TextBlobSink : TextStreamSinkBase
     {
-        private const int WRITING_BUFFER_SIZE = 20 * 1024 * 1024;
-
-        private readonly BlobContainerClient _destinationBlobContainer;
-        private readonly string _destinationBlobPrefix;
-
-        public TextBlobSink(
-            BlobContainerClient destinationBlobContainer,
-            string destinationBlobPrefix,
-            BlobCompression compression,
-            int maxMbPerShard,
-            int shardIndex)
-            : base(compression, maxMbPerShard, shardIndex)
+        public TextBlobSink(RunningContext context, int shardIndex)
+            : base(context, shardIndex)
         {
-            _destinationBlobContainer = destinationBlobContainer;
-            _destinationBlobPrefix = destinationBlobPrefix;
         }
 
         protected override async Task<Stream> CreateOutputStreamAsync()
@@ -37,9 +27,13 @@ namespace KustoBlobSplitLib.LineBased
             {
                 BufferSize = WRITING_BUFFER_SIZE
             };
+
             var shardName =
-                $"{_destinationBlobPrefix}-{ShardIndex}.txt{GetCompressionExtension()}";
-            var shardBlobClient = _destinationBlobContainer.GetBlobClient(shardName);
+                $"{Context.DestinationBlobClient!.Name}-{ShardIndex}.txt{GetCompressionExtension()}";
+            var shardBlobClient = Context
+                .DestinationBlobClient!
+                .GetParentBlobContainerClient()
+                .GetBlobClient(shardName);
             var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions);
 
             return blobStream;
@@ -50,20 +44,6 @@ namespace KustoBlobSplitLib.LineBased
             //   Do nothing as we write to blob directly
 
             return Task.CompletedTask;
-        }
-
-        private string GetCompressionExtension()
-        {
-            switch (Compression)
-            {
-                case BlobCompression.None:
-                    return string.Empty;
-                case BlobCompression.Gzip:
-                    return ".gz";
-
-                default:
-                    throw new NotSupportedException(Compression.ToString());
-            }
         }
     }
 }

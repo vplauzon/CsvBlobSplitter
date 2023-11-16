@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Kusto.Data.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,15 +12,9 @@ namespace KustoBlobSplitLib
         #region Properties
         public AuthMode AuthMode { get; }
 
-        public string? ServiceBusQueueUrl { get; }
-
         public string? ManagedIdentityResourceId { get; }
 
-        public Format Format { get; }
-
-        public Uri SourceBlob { get; }
-
-        public Uri? DestinationBlobPrefix { get; }
+        public string? ServiceBusQueueUrl { get; }
 
         public Uri? KustoIngestUri { get; }
 
@@ -27,62 +22,57 @@ namespace KustoBlobSplitLib
 
         public string? KustoTable { get; }
 
-        public BlobCompression InputCompression { get; }
+        public Uri SourceBlob { get; }
 
-        public BlobCompression OutputCompression { get; }
+        public Uri? DestinationBlobPrefix { get; }
 
-        public bool HasHeaders { get; }
-
-        public int MaxMbPerShard { get; }
+        public BlobSettings BlobSettings { get; }
         #endregion
 
         #region Constructors
         public static RunSettings FromEnvironmentVariables()
         {
             var authMode = GetEnum<AuthMode>("AuthMode", false);
-            var serviceBusQueueUrl = GetString("ServiceBusQueueUrl", false);
             var managedIdentityResourceId = GetString("ManagedIdentityResourceId", false);
-            var format = GetEnum<Format>("Format", false);
+            var serviceBusQueueUrl = GetString("ServiceBusQueueUrl", false);
             var sourceBlob = GetUri("SourceBlob");
             var destinationBlobPrefix = GetUri("DestinationBlobPrefix", false);
             var kustoIngestUri = GetUri("KustoIngestUri", false);
             var kustoDb = GetString("KustoDb", false);
             var kustoTable = GetString("KustoTable", false);
-            var inputCompression = GetEnum<BlobCompression>("InputCompression", false);
-            var outputCompression = GetEnum<BlobCompression>("OutputCompression", false);
+            var format = GetEnum<DataSourceFormat>("Format", false);
+            var inputCompression = GetEnum<DataSourceCompressionType>("InputCompression", false);
+            var outputCompression = GetEnum<DataSourceCompressionType>("OutputCompression", false);
             var hasHeaders = GetBool("CsvHeaders", false);
             var maxMbPerShard = GetInt("MaxMbPerShard", false);
 
             return new RunSettings(
                 authMode,
-                serviceBusQueueUrl,
                 managedIdentityResourceId,
-                format,
-                sourceBlob,
-                destinationBlobPrefix,
+                serviceBusQueueUrl,
                 kustoIngestUri,
                 kustoDb,
                 kustoTable,
-                inputCompression,
-                outputCompression,
-                hasHeaders,
-                maxMbPerShard);
+                sourceBlob,
+                destinationBlobPrefix,
+                new BlobSettings(
+                    format,
+                    inputCompression,
+                    outputCompression,
+                    hasHeaders,
+                    maxMbPerShard));
         }
 
         public RunSettings(
             AuthMode? authMode,
-            string? serviceBusQueueUrl,
             string? managedIdentityResourceId,
-            Format? format,
-            Uri sourceBlob,
-            Uri? destinationBlobPrefix,
+            string? serviceBusQueueUrl,
             Uri? kustoIngestUri,
             string? kustoDb,
             string? kustoTable,
-            BlobCompression? inputCompression,
-            BlobCompression? outputCompression,
-            bool? hasHeaders,
-            int? maxMbPerShard)
+            Uri sourceBlob,
+            Uri? destinationBlobPrefix,
+            BlobSettings blobSettings)
         {
             if (kustoIngestUri != null && (kustoDb == null || kustoTable == null))
             {
@@ -101,18 +91,14 @@ namespace KustoBlobSplitLib
             }
 
             AuthMode = authMode ?? AuthMode.Default;
-            ServiceBusQueueUrl = serviceBusQueueUrl;
             ManagedIdentityResourceId = managedIdentityResourceId;
-            Format = format ?? Format.Text;
-            SourceBlob = sourceBlob;
-            DestinationBlobPrefix = destinationBlobPrefix;
+            ServiceBusQueueUrl = serviceBusQueueUrl;
             KustoIngestUri = kustoIngestUri;
             KustoDb = kustoDb;
             KustoTable = kustoTable;
-            InputCompression = inputCompression ?? BlobCompression.None;
-            OutputCompression = outputCompression ?? BlobCompression.None;
-            HasHeaders = hasHeaders ?? true;
-            MaxMbPerShard = maxMbPerShard ?? 200;
+            SourceBlob = sourceBlob;
+            DestinationBlobPrefix = destinationBlobPrefix;
+            BlobSettings = blobSettings;
         }
         #endregion
 
@@ -261,43 +247,18 @@ namespace KustoBlobSplitLib
         #endregion
         #endregion
 
-        public RunSettings OverrideSourceBlob(Uri sourceBlobUri)
-        {
-            var destinationBlobPrefix =
-                new Uri($"{DestinationBlobPrefix}/{sourceBlobUri.LocalPath}/segment-");
-
-            return new RunSettings(
-                AuthMode,
-                null,
-                ManagedIdentityResourceId,
-                Format,
-                sourceBlobUri,
-                destinationBlobPrefix,
-                KustoIngestUri,
-                KustoDb,
-                KustoTable,
-                InputCompression,
-                OutputCompression,
-                HasHeaders,
-                MaxMbPerShard);
-        }
-
         public void WriteOutSettings()
         {
             Console.WriteLine();
             Console.WriteLine($"AuthMode:  {AuthMode}");
-            Console.WriteLine($"ServiceBusQueueUrl:  {ServiceBusQueueUrl}");
             Console.WriteLine($"ManagedIdentityResourceId:  {ManagedIdentityResourceId}");
-            Console.WriteLine($"Format:  {Format}");
+            Console.WriteLine($"ServiceBusQueueUrl:  {ServiceBusQueueUrl}");
             Console.WriteLine($"SourceBlob:  {SourceBlob}");
             Console.WriteLine($"DestinationBlobPrefix:  {DestinationBlobPrefix}");
             Console.WriteLine($"KustoIngestUri:  {KustoIngestUri}");
             Console.WriteLine($"KustoDb:  {KustoDb}");
             Console.WriteLine($"KustoTable:  {KustoTable}");
-            Console.WriteLine($"Compression:  {InputCompression}");
-            Console.WriteLine($"Compression:  {OutputCompression}");
-            Console.WriteLine($"HasHeaders:  {HasHeaders}");
-            Console.WriteLine($"MaxMbPerShard:  {MaxMbPerShard}");
+            BlobSettings.WriteOutSettings();
             Console.WriteLine();
             Console.WriteLine($"Core count:  {Environment.ProcessorCount}");
             Console.WriteLine();

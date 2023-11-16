@@ -21,15 +21,16 @@ namespace KustoBlobSplitServer
 
             var webServerTask = app.RunAsync();
             var runSettings = RunSettings.FromEnvironmentVariables();
+            var context = await RunningContext.CreateAsync(runSettings);
 
             runSettings.WriteOutSettings();
             if (string.IsNullOrWhiteSpace(runSettings.ServiceBusQueueUrl))
             {   //  Run one ETL
-                await EtlRun.RunEtlAsync(runSettings);
+                await EtlRun.RunEtlAsync(context);
             }
             else
             {   //  Run Service Bus server picking up tasks
-                await ServiceBusServer.RunServerAsync(runSettings);
+                await ServiceBusServer.RunServerAsync(runSettings.ServiceBusQueueUrl, context);
             }
 
             //  Stop web server

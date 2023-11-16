@@ -1,5 +1,6 @@
 ﻿using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
+using Kusto.Data.Common;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -22,12 +23,12 @@ namespace KustoBlobSplitLib.LineBased
         private const int BUFFER_SIZE = 10 * 1024 * 1024;
 
         private readonly BlockBlobClient _sourceBlob;
-        private readonly BlobCompression _compression;
+        private readonly DataSourceCompressionType _compression;
         private readonly ITextSink _sink;
 
         public TextSource(
             BlockBlobClient sourceBlob,
-            BlobCompression compression,
+            DataSourceCompressionType compression,
             ITextSink sink)
         {
             _sourceBlob = sourceBlob;
@@ -106,11 +107,11 @@ namespace KustoBlobSplitLib.LineBased
         {
             switch (_compression)
             {
-                case BlobCompression.None:
+                case DataSourceCompressionType.None:
                     return readStream;
-                case BlobCompression.Gzip:
+                case DataSourceCompressionType.GZip:
                     return new GZipStream(readStream, CompressionMode.Decompress);
-                case BlobCompression.Zip:
+                case DataSourceCompressionType.Zip:
                     var archive = new ZipArchive(readStream);
                     var entries = archive
                         .Entries

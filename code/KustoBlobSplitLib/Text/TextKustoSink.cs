@@ -49,6 +49,7 @@ namespace KustoBlobSplitLib.LineBased
 
             properties.IngestByTags = new[] { tagValue };
             properties.IngestIfNotExists = new[] { tagValue };
+            properties.AdditionalTags = new[] { $"original-blob:{Context.SourceBlobClient.Uri}" };
 
             await Context.IngestClient!.IngestFromStorageAsync(
                 _shardBlobClient.Uri.ToString(),

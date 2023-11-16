@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KustoBlobSplitLib.Text;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,8 +10,8 @@ namespace KustoBlobSplitLib.LineBased
     internal interface ITextSink
     {
         Task ProcessAsync(
-            TextFragment? headerFragment,
-            IWaitingQueue<TextFragment> fragmentQueue,
-            IWaitingQueue<int> releaseQueue);
+            Memory<byte>? header,
+            IWaitingQueue<BufferFragment> fragmentQueue,
+            IWaitingQueue<BufferFragment> releaseQueue);
     }
 }

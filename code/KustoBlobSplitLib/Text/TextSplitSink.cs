@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KustoBlobSplitLib.Text;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -30,15 +31,15 @@ namespace KustoBlobSplitLib.LineBased
         }
 
         async Task ITextSink.ProcessAsync(
-            TextFragment? headerFragment,
-            IWaitingQueue<TextFragment> fragmentQueue,
-            IWaitingQueue<int> releaseQueue)
+            Memory<byte>? header,
+            IWaitingQueue<BufferFragment> fragmentQueue,
+            IWaitingQueue<BufferFragment> releaseQueue)
         {
             var counter = new ThreadSafeCounter();
             var processingTasks = Enumerable.Range(0, 2 * Environment.ProcessorCount + 1)
                 .Select(i => ProcessFragmentsAsync(
                     counter,
-                    headerFragment,
+                    header,
                     fragmentQueue,
                     releaseQueue))
                 .ToImmutableArray();
@@ -48,15 +49,15 @@ namespace KustoBlobSplitLib.LineBased
 
         private async Task ProcessFragmentsAsync(
             ThreadSafeCounter counter,
-            TextFragment? headerFragment,
-            IWaitingQueue<TextFragment> fragmentQueue,
-            IWaitingQueue<int> releaseQueue)
+            Memory<byte>? header,
+            IWaitingQueue<BufferFragment> fragmentQueue,
+            IWaitingQueue<BufferFragment> releaseQueue)
         {
             while (!fragmentQueue.HasCompleted)
             {
                 var sink = _sinkFactory(counter.GetNextCounter().ToString("00000"));
 
-                await sink.ProcessAsync(headerFragment, fragmentQueue, releaseQueue);
+                await sink.ProcessAsync(header, fragmentQueue, releaseQueue);
             }
         }
     }

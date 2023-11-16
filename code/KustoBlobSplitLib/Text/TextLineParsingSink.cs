@@ -22,20 +22,18 @@ namespace KustoBlobSplitLib.Text
         }
 
         async Task ITextSink.ProcessAsync(
-            TextFragment? headerFragment,
-            IWaitingQueue<TextFragment> inputFragmentQueue,
-            IWaitingQueue<int> releaseQueue)
+            Memory<byte>? header,
+            IWaitingQueue<BufferFragment> inputFragmentQueue,
+            IWaitingQueue<BufferFragment> releaseQueue)
         {
-            if (headerFragment != null)
+            if (header != null)
             {
-                throw new ArgumentOutOfRangeException(nameof(headerFragment));
+                throw new ArgumentOutOfRangeException(nameof(header));
             }
 
             var outputFragmentQueue =
-                new WaitingQueue<TextFragment>() as IWaitingQueue<TextFragment>;
-            var remainingFragment = TextFragment.Empty;
-            //  Keep track of #bytes remaining to write before pushing
-            var bytesToWrite = MIN_SINK_BUFFER_SIZE;
+                new WaitingQueue<BufferFragment>() as IWaitingQueue<BufferFragment>;
+            var toPushFragment = BufferFragment.Empty;
             var sinkTask = _propagateHeader
                 ? null
                 : _nextSink.ProcessAsync(null, outputFragmentQueue, releaseQueue);
@@ -49,7 +47,7 @@ namespace KustoBlobSplitLib.Text
                 if (inputResult.IsCompleted)
                 {
                     //  Push what is left (in case no \n at the end of line)
-                    PushFragment(outputFragmentQueue, remainingFragment);
+                    PushFragment(outputFragmentQueue, toPushFragment);
                     outputFragmentQueue.Complete();
                     if (sinkTask != null)
                     {
@@ -61,67 +59,53 @@ namespace KustoBlobSplitLib.Text
                 else
                 {
                     var i = 0;
-                    var lastPushedIndex = -1;
-                    var fragmentBlock = inputResult.Item!.FragmentBlock;
+                    var workingFragment = inputResult.Item!;
+                    var remainingFragment = workingFragment;
 
-                    if (fragmentBlock == null)
-                    {
-                        throw new NotSupportedException(
-                            "FragmentBlock should always be present in this context");
-                    }
-                    foreach (var b in fragmentBlock)
+                    foreach (var b in workingFragment)
                     {
                         if (b == '\n')
-                        {
-                            if (bytesToWrite <= 0 || sinkTask == null)
+                        {   //  Add a line to to-push-fragment
+                            toPushFragment = toPushFragment.Merge(remainingFragment.SpliceBefore(i + 1));
+                            //  Remove it from remaining Fragment
+                            remainingFragment = remainingFragment.SpliceAfter(i);
+                            i = 0;
+                            //  sinkTask==null => has header
+                            if (toPushFragment.Length >= MIN_SINK_BUFFER_SIZE || sinkTask == null)
                             {
-                                var outputFragment = remainingFragment.Merge(fragmentBlock
-                                    .SpliceBefore(i)
-                                    .SpliceAfter(lastPushedIndex)
-                                    .ToTextFragment());
-
                                 if (sinkTask == null)
                                 {
                                     //  Init sink task with header
                                     sinkTask = _nextSink.ProcessAsync(
-                                        outputFragment.FragmentBytes.ToArray().ToTextFragment(),
+                                        toPushFragment.ToArray(),
                                         outputFragmentQueue,
                                         releaseQueue);
                                     //  We release the bytes immediately as they are kept in memory
-                                    releaseQueue.Enqueue(outputFragment.Count());
+                                    releaseQueue.Enqueue(toPushFragment);
                                 }
                                 else
                                 {
-                                    PushFragment(outputFragmentQueue, outputFragment);
+                                    PushFragment(outputFragmentQueue, toPushFragment);
                                 }
-                                remainingFragment = TextFragment.Empty;
-                                lastPushedIndex = i;
-                                bytesToWrite = MIN_SINK_BUFFER_SIZE;
+                                toPushFragment = BufferFragment.Empty;
                             }
                         }
-                        ++i;
-                        --bytesToWrite;
+                        else
+                        {
+                            ++i;
+                        }
                     }
-                    if (lastPushedIndex < fragmentBlock.Count() - 1)
-                    {   //  Keep fragment
-                        remainingFragment = remainingFragment.Merge(
-                            fragmentBlock.SpliceAfter(lastPushedIndex).ToTextFragment());
-                    }
+                    toPushFragment = toPushFragment.Merge(remainingFragment);
                 }
             }
         }
 
         private void PushFragment(
-            IWaitingQueue<TextFragment> outputFragmentQueue,
-            TextFragment fragment)
+            IWaitingQueue<BufferFragment> outputFragmentQueue,
+            BufferFragment fragment)
         {
             if (fragment.Any())
             {
-                if (fragment.FragmentBytes == null)
-                {
-                    throw new ArgumentNullException(nameof(fragment.FragmentBytes));
-                }
-
                 outputFragmentQueue.Enqueue(fragment);
             }
         }

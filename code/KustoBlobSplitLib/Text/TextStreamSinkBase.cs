@@ -1,7 +1,9 @@
 ﻿using Kusto.Data.Common;
+using KustoBlobSplitLib.Text;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection.PortableExecutable;
@@ -25,11 +27,10 @@ namespace KustoBlobSplitLib.LineBased
         protected string ShardId { get; }
 
         async Task ITextSink.ProcessAsync(
-            TextFragment? headerFragment,
-            IWaitingQueue<TextFragment> fragmentQueue,
-            IWaitingQueue<int> releaseQueue)
+            Memory<byte>? header,
+            IWaitingQueue<BufferFragment> fragmentQueue,
+            IWaitingQueue<BufferFragment> releaseQueue)
         {
-            var copyBuffer = new byte[0];
             var stopwatch = new Stopwatch();
 
             stopwatch.Start();
@@ -44,20 +45,17 @@ namespace KustoBlobSplitLib.LineBased
                 await using (var compressedStream = CompressedStream(blobStream))
                 await using (var countingStream = new ByteCountingStream(compressedStream))
                 {
-                    if (headerFragment != null)
+                    if (header != null)
                     {
-                        copyBuffer = await WriteFragmentAsync(
-                            copyBuffer,
-                            headerFragment,
-                            countingStream);
+                        await countingStream.WriteAsync(header.Value);
                     }
                     do
                     {
-                        copyBuffer = await WriteFragmentAsync(
-                            copyBuffer,
-                            fragment,
-                            countingStream);
-                        releaseQueue.Enqueue(fragment.Count());
+                        foreach (var block in fragment.GetMemoryBlocks())
+                        {
+                            await countingStream.WriteAsync(block);
+                        }
+                        releaseQueue.Enqueue(fragment);
                     }
                     while (countingStream.Position < Context.BlobSettings.MaxBytesPerShard
                     && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);
@@ -84,46 +82,6 @@ namespace KustoBlobSplitLib.LineBased
                     throw new NotSupportedException(
                         Context.BlobSettings.OutputCompression.ToString());
             }
-        }
-
-        private async Task<byte[]> WriteFragmentAsync(
-            byte[] copyBuffer,
-            TextFragment fragment,
-            Stream stream)
-        {
-            if (fragment.FragmentBlock != null)
-            {
-                await stream.WriteAsync(
-                    fragment.FragmentBlock.Buffer,
-                    fragment.FragmentBlock.Offset,
-                    fragment.FragmentBlock.Count);
-            }
-            else
-            {
-                copyBuffer = CopyBytes(copyBuffer, fragment.FragmentBytes);
-                await stream.WriteAsync(
-                    copyBuffer,
-                    0,
-                    fragment.FragmentBytes.Count());
-            }
-
-            return copyBuffer;
-        }
-
-        private byte[] CopyBytes(byte[] copyBuffer, IEnumerable<byte> fragmentBytes)
-        {
-            var i = 0;
-
-            if (copyBuffer.Length < fragmentBytes.Count())
-            {
-                copyBuffer = new byte[fragmentBytes.Count()];
-            }
-            foreach (var b in fragmentBytes)
-            {
-                copyBuffer[i++] = b;
-            }
-
-            return copyBuffer;
         }
 
         private Stream CompressedStream(Stream stream)

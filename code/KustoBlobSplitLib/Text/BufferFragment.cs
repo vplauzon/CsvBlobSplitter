@@ -66,6 +66,11 @@ namespace KustoBlobSplitLib.Text
             }
         }
 
+        public override string ToString()
+        {
+            return $"({_offset}, {_offset + Length}):  Length = {Length}";
+        }
+
         #region Merge
         public BufferFragment Merge(BufferFragment other)
         {
@@ -85,18 +90,24 @@ namespace KustoBlobSplitLib.Text
                 }
 
                 var left = _offset < other._offset ? this : other;
-                var right = _offset > other._offset ? other : this;
+                var right = _offset < other._offset ? other : this;
 
-                if (left._offset + left.Length % _buffer.Length != right._offset)
+                if (left._offset == 0 && right._offset + Length == _buffer.Length)
+                {
+                    return new BufferFragment(_buffer, right._offset, right.Length + left.Length);
+                }
+                else if ((left._offset + left.Length) % _buffer.Length != right._offset)
                 {
                     throw new ArgumentException(nameof(other), "Not contiguous");
                 }
-
-                return new BufferFragment(_buffer, left._offset, left.Length + right.Length);
+                else
+                {
+                    return new BufferFragment(_buffer, left._offset, left.Length + right.Length);
+                }
             }
         }
 
-        public (BufferFragment, IImmutableList<BufferFragment>) TryMerge(
+        public (BufferFragment Fragment, IImmutableList<BufferFragment> List) TryMerge(
             IEnumerable<BufferFragment> others)
         {
             var sortedOthers = others
@@ -107,8 +118,11 @@ namespace KustoBlobSplitLib.Text
             while (stack.Any())
             {
                 var other = stack.Peek();
+                var left = _offset < other._offset ? this : other;
+                var right = _offset < other._offset ? other : this;
 
-                if (mergedFragment._offset + mergedFragment.Length == other._offset)
+                if (left._offset == 0 && right._offset + Length == _buffer.Length
+                    || left._offset + left.Length == right._offset)
                 {
                     mergedFragment = mergedFragment.Merge(other);
                     stack.Pop();
@@ -134,7 +148,7 @@ namespace KustoBlobSplitLib.Text
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
 
-            return new BufferFragment(_buffer, _offset, index + 1);
+            return new BufferFragment(_buffer, _offset, index);
         }
 
         /// <summary>This excludes the specified index and includes everything after.</summary>

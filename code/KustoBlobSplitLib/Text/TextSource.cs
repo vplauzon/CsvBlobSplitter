@@ -1,8 +1,10 @@
 ﻿using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
 using Kusto.Data.Common;
+using KustoBlobSplitLib.Text;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
@@ -42,11 +44,11 @@ namespace KustoBlobSplitLib.LineBased
             {
                 BufferSize = STORAGE_BUFFER_SIZE
             };
-            var buffer = new byte[BUFFER_SIZE];
-            var bufferAvailable = BUFFER_SIZE;
-            var readingIndex = 0;
-            var fragmentQueue = new WaitingQueue<TextFragment>() as IWaitingQueue<TextFragment>;
-            var releaseQueue = new WaitingQueue<int>() as IWaitingQueue<int>;
+            var buffer = BufferFragment.Create(BUFFER_SIZE);
+            var bufferAvailable = buffer;
+            var fragmentList = (IEnumerable<BufferFragment>)ImmutableArray<BufferFragment>.Empty;
+            var fragmentQueue = new WaitingQueue<BufferFragment>() as IWaitingQueue<BufferFragment>;
+            var releaseQueue = new WaitingQueue<BufferFragment>() as IWaitingQueue<BufferFragment>;
             var sinkTask = Task.Run(() => _sink.ProcessAsync(
                 null,
                 fragmentQueue,
@@ -58,14 +60,11 @@ namespace KustoBlobSplitLib.LineBased
             {
                 while (true)
                 {
-                    if (bufferAvailable >= MIN_STORAGE_FETCH)
+                    if (bufferAvailable.Length >= MIN_STORAGE_FETCH
+                        || bufferAvailable.GetMemoryBlocks().Count() > 1)
                     {
                         var readLength = await uncompressedStream.ReadAsync(
-                            buffer,
-                            readingIndex,
-                            Math.Min(
-                                bufferAvailable,
-                                BUFFER_SIZE - readingIndex));
+                            bufferAvailable.GetMemoryBlocks().First());
 
                         if (readLength == 0)
                         {
@@ -75,30 +74,29 @@ namespace KustoBlobSplitLib.LineBased
                         }
                         else
                         {
-                            var block = new MemoryBlock(buffer, readingIndex, readLength);
+                            var currentBuffer = bufferAvailable.SpliceBefore(readLength);
 
-                            fragmentQueue.Enqueue(block.ToTextFragment());
-                            bufferAvailable -= readLength;
-                            readingIndex = (readingIndex + readLength) % BUFFER_SIZE;
+                            fragmentQueue.Enqueue(currentBuffer);
+                            bufferAvailable = bufferAvailable.SpliceAfter(readLength - 1);
                         }
                     }
-                    while (releaseQueue.HasData || bufferAvailable < MIN_STORAGE_FETCH)
+                    while (releaseQueue.HasData || bufferAvailable.Length < MIN_STORAGE_FETCH)
                     {
-                        var returnLengthResult = await TaskHelper.AwaitAsync(
+                        var fragmentResult = await TaskHelper.AwaitAsync(
                             releaseQueue.DequeueAsync(),
                             sinkTask);
 
-                        if (returnLengthResult.IsCompleted)
+                        if (fragmentResult.IsCompleted)
                         {
                             throw new NotSupportedException(
                                 "releaseQueue should never be observed as completed");
                         }
-                        bufferAvailable += returnLengthResult.Item;
-                        if (bufferAvailable > BUFFER_SIZE)
-                        {
-                            throw new InvalidDataException(
-                                $"Buffer invalid by {bufferAvailable - BUFFER_SIZE}");
-                        }
+                        fragmentList = fragmentList.Prepend(fragmentResult.Item!);
+
+                        var bundle = bufferAvailable.TryMerge(fragmentList);
+
+                        bufferAvailable = bundle.Fragment;
+                        fragmentList = bundle.List;
                     }
                 }
             }

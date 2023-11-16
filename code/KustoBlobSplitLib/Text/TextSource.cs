@@ -96,7 +96,8 @@ namespace KustoBlobSplitLib.LineBased
                         bufferAvailable += returnLengthResult.Item;
                         if (bufferAvailable > BUFFER_SIZE)
                         {
-                            throw new InvalidDataException("Buffer invalid");
+                            throw new InvalidDataException(
+                                $"Buffer invalid by {bufferAvailable - BUFFER_SIZE}");
                         }
                     }
                 }

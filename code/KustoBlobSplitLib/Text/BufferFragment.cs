@@ -21,6 +21,8 @@ namespace KustoBlobSplitLib.Text
 
         public int Length { get; }
 
+        public bool Any() => Length > 0;
+
         #region IEnumerable<byte>
         IEnumerator<byte> IEnumerable<byte>.GetEnumerator()
         {

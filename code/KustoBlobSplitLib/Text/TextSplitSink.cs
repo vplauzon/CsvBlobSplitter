@@ -36,7 +36,8 @@ namespace KustoBlobSplitLib.LineBased
             IWaitingQueue<BufferFragment> releaseQueue)
         {
             var counter = new ThreadSafeCounter();
-            var processingTasks = Enumerable.Range(0, 2 * Environment.ProcessorCount + 1)
+            var processingTasks = Enumerable.Range(0, 1)
+            //var processingTasks = Enumerable.Range(0, 2 * Environment.ProcessorCount + 1)
                 .Select(i => ProcessFragmentsAsync(
                     counter,
                     header,

@@ -39,8 +39,6 @@ namespace KustoBlobSplitLib.LineBased
 
             if (!fragmentResult.IsCompleted)
             {
-                var fragment = fragmentResult.Item!;
-
                 await using (var blobStream = await CreateOutputStreamAsync())
                 await using (var compressedStream = CompressedStream(blobStream))
                 await using (var countingStream = new ByteCountingStream(compressedStream))
@@ -51,6 +49,8 @@ namespace KustoBlobSplitLib.LineBased
                     }
                     do
                     {
+                        var fragment = fragmentResult.Item!;
+
                         foreach (var block in fragment.GetMemoryBlocks())
                         {
                             await countingStream.WriteAsync(block);

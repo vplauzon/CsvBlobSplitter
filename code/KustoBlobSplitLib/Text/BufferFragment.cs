@@ -121,7 +121,7 @@ namespace KustoBlobSplitLib.Text
                 for (int i = 0; i != list.Count; ++i)
                 {
                     var other = list[i];
-                    var end = (_offset + Length) % _buffer.Length;
+                    var end = (mergedFragment._offset + mergedFragment.Length) % _buffer.Length;
                     var otherEnd = (other._offset + other.Length) % _buffer.Length;
 
                     if (end == other._offset || otherEnd == _offset)

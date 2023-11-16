@@ -89,24 +89,20 @@ namespace KustoBlobSplitLib.Text
                     throw new ArgumentException(nameof(other), "Not related to same buffer");
                 }
 
-                var left = _offset < other._offset ? this : other;
-                var right = _offset < other._offset ? other : this;
+                var end = (_offset + Length) % _buffer.Length;
+                var otherEnd = (other._offset + other.Length) % _buffer.Length;
 
-                if (left._offset == 0 && right._offset + Length == _buffer.Length)
+                if (end == other._offset)
                 {
-                    return new BufferFragment(_buffer, right._offset, right.Length + left.Length);
+                    return new BufferFragment(_buffer, _offset, Length + other.Length);
                 }
-                else if ((right._offset + right.Length) % _buffer.Length == left._offset)
+                else if (otherEnd == _offset)
                 {
-                    return new BufferFragment(_buffer, right._offset, left.Length + right.Length);
-                }
-                else if ((left._offset + left.Length) % _buffer.Length != right._offset)
-                {
-                    throw new ArgumentException(nameof(other), "Not contiguous");
+                    return new BufferFragment(_buffer, other._offset, Length + other.Length);
                 }
                 else
                 {
-                    return new BufferFragment(_buffer, left._offset, left.Length + right.Length);
+                    throw new ArgumentException(nameof(other), "Not contiguous");
                 }
             }
         }
@@ -125,11 +121,10 @@ namespace KustoBlobSplitLib.Text
                 for (int i = 0; i != list.Count; ++i)
                 {
                     var other = list[i];
-                    var left = _offset < other._offset ? this : other;
-                    var right = _offset < other._offset ? other : this;
+                    var end = (_offset + Length) % _buffer.Length;
+                    var otherEnd = (other._offset + other.Length) % _buffer.Length;
 
-                    if (left._offset == 0 && right._offset + Length == _buffer.Length
-                        || left._offset + left.Length == right._offset)
+                    if (end == other._offset || otherEnd == _offset)
                     {
                         mergedFragment = mergedFragment.Merge(other);
                         indexToRemove.Add(i);

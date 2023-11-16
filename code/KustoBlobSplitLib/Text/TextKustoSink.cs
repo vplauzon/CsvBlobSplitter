@@ -14,7 +14,7 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal class TextKustoSink : TextStreamSinkBase
     {
-        private readonly string _blobNamePrefix;
+        private readonly BlobClient _shardBlobClient;
 
         public TextKustoSink(
             RunningContext context,
@@ -22,7 +22,12 @@ namespace KustoBlobSplitLib.LineBased
             string blobNamePrefix)
             : base(context, shardIndex)
         {
-            _blobNamePrefix = blobNamePrefix;
+            var shardName =
+                $"{blobNamePrefix}-{ShardIndex:000000}.txt{GetCompressionExtension()}";
+            
+            _shardBlobClient = Context
+                .RoundRobinIngestStagingContainer()
+                .GetBlobClient(shardName);
         }
 
         protected override async Task<Stream> CreateOutputStreamAsync()
@@ -32,15 +37,13 @@ namespace KustoBlobSplitLib.LineBased
                 BufferSize = WRITING_BUFFER_SIZE
             };
 
-            var shardBlobClient = GetShardBlobClient();
-            var blobStream = await shardBlobClient.OpenWriteAsync(true, writeOptions);
+            var blobStream = await _shardBlobClient.OpenWriteAsync(true, writeOptions);
 
             return blobStream;
         }
 
         protected override async Task PostWriteAsync()
         {
-            var shardBlobClient = GetShardBlobClient();
             var properties = Context.CreateIngestionProperties();
             var tagValue = $"{Context.SourceBlobClient.Uri}-{ShardIndex}";
 
@@ -48,23 +51,12 @@ namespace KustoBlobSplitLib.LineBased
             properties.IngestIfNotExists = new[] { tagValue };
 
             await Context.IngestClient!.IngestFromStorageAsync(
-                shardBlobClient.Uri.ToString(),
+                _shardBlobClient.Uri.ToString(),
                 properties,
                 new StorageSourceOptions
                 {
                     CompressionType = Context.BlobSettings.OutputCompression
                 });
-        }
-
-        private BlobClient GetShardBlobClient()
-        {
-            var shardName =
-                $"{_blobNamePrefix}-{ShardIndex}.txt{GetCompressionExtension()}";
-            var shardBlobClient = Context
-                .RoundRobinIngestStagingContainer()
-                .GetBlobClient(shardName);
-
-            return shardBlobClient;
         }
     }
 }

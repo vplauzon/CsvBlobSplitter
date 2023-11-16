@@ -41,7 +41,7 @@ namespace KustoBlobSplitLib
             Console.WriteLine($"Compression:  {InputCompression}");
             Console.WriteLine($"Compression:  {OutputCompression}");
             Console.WriteLine($"HasHeaders:  {HasHeaders}");
-            Console.WriteLine($"MaxMbPerShard:  {MaxBytesPerShard}");
+            Console.WriteLine($"MaxBytesPerShard:  {MaxBytesPerShard}");
         }
     }
 }

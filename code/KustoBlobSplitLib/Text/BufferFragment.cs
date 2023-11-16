@@ -68,7 +68,7 @@ namespace KustoBlobSplitLib.Text
 
         public override string ToString()
         {
-            return $"({_offset}, {_offset + Length}):  Length = {Length}";
+            return $"({_offset}, {(_offset + Length) % _buffer.Length}):  Length = {Length}";
         }
 
         #region Merge
@@ -96,6 +96,10 @@ namespace KustoBlobSplitLib.Text
                 {
                     return new BufferFragment(_buffer, right._offset, right.Length + left.Length);
                 }
+                else if ((right._offset + right.Length) % _buffer.Length == left._offset)
+                {
+                    return new BufferFragment(_buffer, right._offset, left.Length + right.Length);
+                }
                 else if ((left._offset + left.Length) % _buffer.Length != right._offset)
                 {
                     throw new ArgumentException(nameof(other), "Not contiguous");
@@ -110,30 +114,35 @@ namespace KustoBlobSplitLib.Text
         public (BufferFragment Fragment, IImmutableList<BufferFragment> List) TryMerge(
             IEnumerable<BufferFragment> others)
         {
-            var sortedOthers = others
-                .OrderBy(f => f._offset < _offset ? f._offset + _buffer.Length : f._offset);
-            var stack = new Stack<BufferFragment>(sortedOthers);
+            var list = new List<BufferFragment>(others);
+            var indexToRemove = new List<int>(list.Count);
             var mergedFragment = this;
 
-            while (stack.Any())
+            do
             {
-                var other = stack.Peek();
-                var left = _offset < other._offset ? this : other;
-                var right = _offset < other._offset ? other : this;
+                indexToRemove.Clear();
 
-                if (left._offset == 0 && right._offset + Length == _buffer.Length
-                    || left._offset + left.Length == right._offset)
+                for (int i = 0; i != list.Count; ++i)
                 {
-                    mergedFragment = mergedFragment.Merge(other);
-                    stack.Pop();
+                    var other = list[i];
+                    var left = _offset < other._offset ? this : other;
+                    var right = _offset < other._offset ? other : this;
+
+                    if (left._offset == 0 && right._offset + Length == _buffer.Length
+                        || left._offset + left.Length == right._offset)
+                    {
+                        mergedFragment = mergedFragment.Merge(other);
+                        indexToRemove.Add(i);
+                    }
                 }
-                else
+                foreach (var i in indexToRemove.Reverse<int>())
                 {
-                    break;
+                    list.RemoveAt(i);
                 }
             }
+            while (indexToRemove.Any() && list.Any());
 
-            return (mergedFragment, stack.ToImmutableArray());
+            return (mergedFragment, list.ToImmutableArray());
         }
         #endregion
 
@@ -166,7 +175,10 @@ namespace KustoBlobSplitLib.Text
             }
             else
             {
-                return new BufferFragment(_buffer, _offset + index + 1, Length - index - 1);
+                return new BufferFragment(
+                    _buffer,
+                    (_offset + index + 1) % _buffer.Length,
+                    Length - index - 1);
             }
         }
         #endregion

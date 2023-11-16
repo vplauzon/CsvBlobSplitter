@@ -16,8 +16,8 @@ namespace KustoBlobSplitLib.LineBased
 {
     internal class TextBlobSink : TextStreamSinkBase
     {
-        public TextBlobSink(RunningContext context, int shardIndex)
-            : base(context, shardIndex)
+        public TextBlobSink(RunningContext context, string shardId)
+            : base(context, shardId)
         {
         }
 
@@ -29,7 +29,7 @@ namespace KustoBlobSplitLib.LineBased
             };
 
             var shardName =
-                $"{Context.DestinationBlobClient!.Name}-{ShardIndex}.txt{GetCompressionExtension()}";
+                $"{Context.DestinationBlobClient!.Name}-{ShardId}.txt{GetCompressionExtension()}";
             var shardBlobClient = Context
                 .DestinationBlobClient!
                 .GetParentBlobContainerClient()

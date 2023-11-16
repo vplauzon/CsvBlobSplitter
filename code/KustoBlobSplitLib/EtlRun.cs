@@ -48,7 +48,7 @@ namespace KustoBlobSplitLib
             }
         }
 
-        private static Func<int, ITextSink> GetSubSinkFactory(RunningContext context)
+        private static Func<string, ITextSink> GetSubSinkFactory(RunningContext context)
         {
             if (context.IngestClient == null)
             {

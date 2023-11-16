@@ -18,12 +18,12 @@ namespace KustoBlobSplitLib.LineBased
 
         public TextKustoSink(
             RunningContext context,
-            int shardIndex,
+            string shardId,
             string blobNamePrefix)
-            : base(context, shardIndex)
+            : base(context, shardId)
         {
             var shardName =
-                $"{blobNamePrefix}-{ShardIndex:000000}.txt{GetCompressionExtension()}";
+                $"{blobNamePrefix}-{shardId}.txt{GetCompressionExtension()}";
             
             _shardBlobClient = Context
                 .RoundRobinIngestStagingContainer()
@@ -45,7 +45,7 @@ namespace KustoBlobSplitLib.LineBased
         protected override async Task PostWriteAsync()
         {
             var properties = Context.CreateIngestionProperties();
-            var tagValue = $"{Context.SourceBlobClient.Uri}-{ShardIndex}";
+            var tagValue = $"{Context.SourceBlobClient.Uri}-{ShardId}";
 
             properties.IngestByTags = new[] { tagValue };
             properties.IngestIfNotExists = new[] { tagValue };

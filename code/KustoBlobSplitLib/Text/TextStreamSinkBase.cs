@@ -14,15 +14,15 @@ namespace KustoBlobSplitLib.LineBased
     {
         protected const int WRITING_BUFFER_SIZE = 20 * 1024 * 1024;
 
-        public TextStreamSinkBase(RunningContext context, int shardIndex)
+        public TextStreamSinkBase(RunningContext context, string shardId)
         {
             Context = context;
-            ShardIndex = shardIndex;
+            ShardId = shardId;
         }
 
         protected RunningContext Context { get; }
 
-        protected int ShardIndex { get; }
+        protected string ShardId { get; }
 
         async Task ITextSink.ProcessAsync(
             TextFragment? headerFragment,
@@ -63,7 +63,7 @@ namespace KustoBlobSplitLib.LineBased
                     && !(fragmentResult = await fragmentQueue.DequeueAsync()).IsCompleted);
                 }
                 await PostWriteAsync();
-                Console.WriteLine($"Sealed shard {ShardIndex} ({stopwatch.Elapsed})");
+                Console.WriteLine($"Sealed shard {ShardId} ({stopwatch.Elapsed})");
             }
         }
 

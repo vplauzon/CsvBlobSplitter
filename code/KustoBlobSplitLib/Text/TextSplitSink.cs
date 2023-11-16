@@ -22,9 +22,9 @@ namespace KustoBlobSplitLib.LineBased
         }
         #endregion
 
-        private readonly Func<int, ITextSink> _sinkFactory;
+        private readonly Func<string, ITextSink> _sinkFactory;
 
-        public TextSplitSink(Func<int, ITextSink> sinkFactory)
+        public TextSplitSink(Func<string, ITextSink> sinkFactory)
         {
             _sinkFactory = sinkFactory;
         }
@@ -54,7 +54,7 @@ namespace KustoBlobSplitLib.LineBased
         {
             while (!fragmentQueue.HasCompleted)
             {
-                var sink = _sinkFactory(counter.GetNextCounter());
+                var sink = _sinkFactory(counter.GetNextCounter().ToString("00000"));
 
                 await sink.ProcessAsync(headerFragment, fragmentQueue, releaseQueue);
             }

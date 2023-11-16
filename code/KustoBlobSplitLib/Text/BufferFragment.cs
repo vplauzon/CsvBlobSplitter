@@ -11,6 +11,11 @@ namespace KustoBlobSplitLib.Text
 {
     internal class BufferFragment : IEnumerable<byte>
     {
+        #region Inner Types
+
+        //public record MemoryBlock(byte[] Buffer, int Offset, int Length);
+        #endregion
+
         private readonly byte[] _buffer;
         private readonly int _offset;
 
@@ -47,6 +52,19 @@ namespace KustoBlobSplitLib.Text
         public int Length { get; }
 
         public bool Any() => Length > 0;
+
+        public IEnumerable<Memory<byte>> GetMemoryBlocks()
+        {
+            if (_offset + Length <= _buffer.Length)
+            {
+                yield return new Memory<byte>(_buffer, _offset, Length);
+            }
+            else
+            {
+                yield return new Memory<byte>(_buffer, _offset, _buffer.Length - _offset);
+                yield return new Memory<byte>(_buffer, 0, Length - (_buffer.Length - _offset));
+            }
+        }
 
         #region Merge
         public BufferFragment Merge(BufferFragment other)

@@ -170,7 +170,7 @@ namespace KustoBlobSplitLib.Text
         /// <returns></returns>
         public BufferFragment SpliceAfter(int index)
         {
-            if (index < 0 || index >= Length)
+            if (index < -1 || index >= Length)
             {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
@@ -178,7 +178,7 @@ namespace KustoBlobSplitLib.Text
             {
                 return Empty;
             }
-            else if (index == 0)
+            else if (index == -1)
             {
                 return this;
             }

@@ -65,14 +65,13 @@ namespace KustoBlobSplitLib.Text
                     foreach (var b in workingFragment)
                     {
                         if (b == '\n')
-                        {   //  Add a line to to-push-fragment
-                            toPushFragment = toPushFragment.Merge(remainingFragment.SpliceBefore(i + 1));
-                            //  Remove it from remaining Fragment
-                            remainingFragment = remainingFragment.SpliceAfter(i);
-                            i = 0;
-                            //  sinkTask==null => has header
-                            if (toPushFragment.Length >= MIN_SINK_BUFFER_SIZE || sinkTask == null)
+                        {   //  sinkTask==null => has header
+                            if (toPushFragment.Length + i >= MIN_SINK_BUFFER_SIZE || sinkTask == null)
                             {
+                                toPushFragment = toPushFragment.Merge(remainingFragment.SpliceBefore(i + 1));
+                                //  Remove it from remaining Fragment
+                                remainingFragment = remainingFragment.SpliceAfter(i);
+                                i = 0;
                                 if (sinkTask == null)
                                 {
                                     //  Init sink task with header
@@ -88,6 +87,10 @@ namespace KustoBlobSplitLib.Text
                                     PushFragment(outputFragmentQueue, toPushFragment);
                                 }
                                 toPushFragment = BufferFragment.Empty;
+                            }
+                            else
+                            {
+                                ++i;
                             }
                         }
                         else

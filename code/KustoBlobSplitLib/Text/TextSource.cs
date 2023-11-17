@@ -94,14 +94,8 @@ namespace KustoBlobSplitLib.LineBased
                         }
                         fragmentList = fragmentList.Prepend(fragmentResult.Item!);
 
-                        var stopwatch = new Stopwatch();
-                        stopwatch.Start();
                         var bundle = bufferAvailable.TryMerge(fragmentList);
 
-                        if(fragmentList.Count()>5)
-                        {
-                            Console.WriteLine($"List of {fragmentList.Count()}:  {stopwatch.Elapsed}");
-                        }
                         bufferAvailable = bundle.Fragment;
                         fragmentList = bundle.List;
                     }

@@ -151,8 +151,18 @@ namespace KustoBlobSplitLib.Text
             {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
-
-            return new BufferFragment(_buffer, _offset, index);
+            if (index == Length)
+            {
+                return this;
+            }
+            else if (index == 0)
+            {
+                return Empty;
+            }
+            else
+            {
+                return new BufferFragment(_buffer, _offset, index);
+            }
         }
 
         /// <summary>This excludes the specified index and includes everything after.</summary>
@@ -167,6 +177,10 @@ namespace KustoBlobSplitLib.Text
             if (index == Length - 1)
             {
                 return Empty;
+            }
+            else if (index == 0)
+            {
+                return this;
             }
             else
             {
